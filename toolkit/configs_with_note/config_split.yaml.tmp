@@ -1,0 +1,26 @@
+split:
+  input: /gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/raw/worm_bin2.tif
+  output: /gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/raw/test
+  mip: 0
+  chunk_size:
+  - 512
+  - 512
+  - 512
+  overlap:
+  - 64
+  - 64
+  - 64
+hpc:
+  enable: true
+  scheduler: slurm
+  job_dir: magneton/jobs/split
+  python_bin: python
+  time: 00:30:00
+  cpus: 4
+  mem: 4G
+  partition: day
+  extra_modules:
+  - StdEnv
+  conda: /gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh
+  env: pytc
+  work_path: .

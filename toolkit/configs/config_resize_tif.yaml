@@ -1,0 +1,20 @@
+resize:
+  input: "/gpfs/radev/home/zz545/project/magneton/outputs/test.tif"     # Input data path, tif format
+  output: "/gpfs/radev/home/zz545/project/magneton/outputs/testbin2.tif"    # Output data path, tif format
+  zoom_factor: [1/2, 1/2, 1/2]      # Zoom factor in 3 axis, zoom in > 1, zoom out < 1
+  zoom_order: 0                     # The order of the spline interpolation
+
+hpc:                                # HPC submission cnfiguration
+  enable: true                      # Enable switch
+  scheduler: "slurm"                # "slurm" 
+  job_dir: "magneton/jobs/resize"      # Directory for generating scripts and lists
+  python_bin: "python"              # Python path
+  time: "00:30:00"                  # Time for each task
+  cpus: 16                          # Cpu number 
+  mem: "4G"                         # Mem per cpu
+  partition: "day"                  # Partition
+  extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+  conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+  env: "pytc"                                                         # Name of conda env
+  work_path: .                      # Work Path, should be the magneton floder
+

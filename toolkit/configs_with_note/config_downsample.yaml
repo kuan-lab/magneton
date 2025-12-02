@@ -1,0 +1,22 @@
+downsample:
+  flag: true                        # Enable switch
+  queuepath: "magneton/igneous_tasks"      # Storage path for the task list
+  source_path: "/gpfs/radev/project/kuan/zz545/251021_test" # Raw data path
+  num_workers: 8                    # Number of threads
+  mip: 0                            # Start mip
+  num_mips: 2                       # Number of mip for downsample 
+  factor: [2, 2, 2]                 # Downsample factor of all 3 axes [x, y, z]
+
+hpc:                                # HPC submission configuration
+  enable: true                      # Enable switch
+  scheduler: "slurm"                # "slurm" 
+  job_dir: "magneton/jobs/downsample"      # Directory for generating scripts and lists
+  python_bin: "python"              # Python path
+  time: "00:30:00"                  # Time for each task
+  cpus: 16                          # Cpu number 
+  mem: "4G"                         # Mem per cpu
+  partition: "day"                  # Partition
+  extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+  conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+  env: "pytc"                                                         # Name of conda env
+  work_path: .                      # Work Path, should be the magneton floder

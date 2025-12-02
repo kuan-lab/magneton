@@ -1,0 +1,26 @@
+mask:
+  mask_flag: true                   # Enable switch
+  input: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/affinity_map_bin4"    # Input path, precomputed format
+  output: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/affinity_map_bin4"   # Output path, precomputed format
+  input_mip: 2                      # The mip of input data
+  preview_tif_flag: true            # Enable preview of tif file
+  preview_tif: "preview_tif.tif"    # Name/Path of preview file
+  min_region_size: 5                # Filter: minimum aggregate volume size
+  max_region_size: 1100000          # Filter: maximum aggregate volume size
+  erode_size: 1                     # Erosion factor
+  dilate_size: 9                    # Dilatation factor
+
+
+hpc:                                # HPC submission configuration
+  enable: true                      # Enable switch
+  scheduler: "slurm"                # "slurm" 
+  job_dir: "magneton/jobs/gen_mask"      # Directory for generating scripts and lists
+  python_bin: "python"              # Python path
+  time: "00:30:00"                  # Time for each task
+  cpus: 16                          # Cpu number 
+  mem: "4G"                         # Mem per cpu
+  partition: "day"                  # Partition
+  extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+  conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+  env: "pytc"                                                         # Name of conda env
+  work_path: .                      # Work Path, should be the magneton floder

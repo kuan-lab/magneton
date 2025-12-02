@@ -1,0 +1,85 @@
+AUGMENTOR:
+  SMOOTH: false
+DATASET:
+  IMAGE_NAME: train-input-bin2.tif
+  INPUT_PATH: /gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/raw/test
+  LABEL_NAME: train-label-bin2.tif
+  OUTPUT_PATH: outputs/test
+  PAD_SIZE:
+  - 4
+  - 64
+  - 64
+INFERENCE:
+  AUG_MODE: min
+  AUG_NUM: None
+  IMAGE_NAME: chunk_z04_y00_x00.tif
+  INPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  OUTPUT_ACT:
+  - sigmoid
+  OUTPUT_NAME: chunk_z04_y00_x00.h5
+  OUTPUT_PATH: outputs/test
+  OUTPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  PAD_SIZE:
+  - 4
+  - 32
+  - 32
+  SAMPLES_PER_BATCH: 2
+  STRIDE:
+  - 8
+  - 128
+  - 128
+MODEL:
+  FILTERS:
+  - 32
+  - 64
+  - 96
+  - 128
+  - 160
+  INPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  IN_PLANES: 1
+  LABEL_EROSION: 0
+  LOSS_OPTION:
+  - - WeightedBCEWithLogitsLoss
+    - DiceLoss
+  LOSS_WEIGHT:
+  - - 1.0
+    - 0.5
+  NORM_MODE: gn
+  OUTPUT_ACT:
+  - - none
+    - sigmoid
+  OUTPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  OUT_PLANES: 3
+  TARGET_OPT:
+  - '2'
+  WEIGHT_OPT:
+  - - '1'
+    - '0'
+MONITOR:
+  ITERATION_NUM:
+  - 200
+  - 1000
+SOLVER:
+  BASE_LR: 0.0001
+  GAMMA: 0.5
+  ITERATION_RESTART: true
+  ITERATION_SAVE: 500
+  ITERATION_STEP: 1
+  ITERATION_TOTAL: 30000
+  LR_SCHEDULER_NAME: ReduceLROnPlateau
+  SAMPLES_PER_BATCH: 8
+SYSTEM:
+  NUM_CPUS: 1
+  NUM_GPUS: 1

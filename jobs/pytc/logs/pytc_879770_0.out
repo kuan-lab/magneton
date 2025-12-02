@@ -1,0 +1,53 @@
+rank: None, device: cuda, seed: 0
+
+PyTorch: 2.8.0+cu128
+Output directory: outputs/test
+Full config saved to outputs/test/config.yaml
+Return feature maps from 3D U-Net? False
+model:  UNet3D
+Parallelism with DataParallel.
+Optimizer:  SGD
+Sample size required for the augmentor: [ 19 372 372]
+Channel split rule for prediction:  [3]
+Channel split rule for prediction:  [3]
+Mode:  train
+None 1 ['train-input-bin2.tif']
+None 1 ['train-label-bin2.tif']
+volume shape (original): (512, 512, 512)
+volume shape (after scaling and padding): (520, 640, 640)
+label shape (after scaling and padding): (520, 640, 640)
+Total number of samples to be generated:  36325222
+[Iteration 00000] Data time: 2.5117s, Iter time: 31.2402s, Avg iter time: 31.2402s, Time Left 260.33h.
+[Iteration 00001] Data time: 0.0006s, Iter time: 1.6419s, Avg iter time: 16.4411s, Time Left 137.00h.
+[Iteration 00002] Data time: 0.0005s, Iter time: 1.6378s, Avg iter time: 11.5066s, Time Left 95.88h.
+[Iteration 00003] Data time: 0.0006s, Iter time: 1.6348s, Avg iter time: 9.0387s, Time Left 75.31h.
+[Iteration 00004] Data time: 0.0009s, Iter time: 1.6342s, Avg iter time: 7.5578s, Time Left 62.97h.
+[Iteration 00005] Data time: 0.6545s, Iter time: 2.2884s, Avg iter time: 6.6796s, Time Left 55.65h.
+[Iteration 00006] Data time: 0.9569s, Iter time: 2.5922s, Avg iter time: 6.0956s, Time Left 50.79h.
+[Iteration 00007] Data time: 0.8054s, Iter time: 2.4399s, Avg iter time: 5.6387s, Time Left 46.98h.
+[Iteration 00008] Data time: 0.8221s, Iter time: 2.4583s, Avg iter time: 5.2853s, Time Left 44.03h.
+[Iteration 00009] Data time: 0.7850s, Iter time: 2.4199s, Avg iter time: 4.9988s, Time Left 41.64h.
+[Iteration 00010] Data time: 0.7569s, Iter time: 2.3906s, Avg iter time: 4.7617s, Time Left 39.67h.
+[Iteration 00011] Data time: 0.3886s, Iter time: 2.0238s, Avg iter time: 4.5335s, Time Left 37.76h.
+[Iteration 00012] Data time: 1.3461s, Iter time: 2.9824s, Avg iter time: 4.4142s, Time Left 36.77h.
+[Iteration 00013] Data time: 0.7391s, Iter time: 2.3745s, Avg iter time: 4.2685s, Time Left 35.55h.
+[Iteration 00014] Data time: 1.1598s, Iter time: 2.7962s, Avg iter time: 4.1704s, Time Left 34.74h.
+[Iteration 00015] Data time: 0.4533s, Iter time: 2.0885s, Avg iter time: 4.0402s, Time Left 33.65h.
+[Iteration 00016] Data time: 0.7518s, Iter time: 2.3868s, Avg iter time: 3.9430s, Time Left 32.84h.
+[Iteration 00017] Data time: 0.5235s, Iter time: 2.1575s, Avg iter time: 3.8438s, Time Left 32.01h.
+[Iteration 00018] Data time: 1.2552s, Iter time: 2.8905s, Avg iter time: 3.7936s, Time Left 31.59h.
+[Iteration 00019] Data time: 0.9364s, Iter time: 2.5720s, Avg iter time: 3.7325s, Time Left 31.08h.
+[Iteration 00020] Data time: 0.4949s, Iter time: 2.1327s, Avg iter time: 3.6563s, Time Left 30.45h.
+[Iteration 00021] Data time: 0.4004s, Iter time: 2.0359s, Avg iter time: 3.5827s, Time Left 29.83h.
+[Iteration 00022] Data time: 0.9203s, Iter time: 2.5550s, Avg iter time: 3.5380s, Time Left 29.46h.
+[Iteration 00023] Data time: 0.7514s, Iter time: 2.3860s, Avg iter time: 3.4900s, Time Left 29.06h.
+[Iteration 00024] Data time: 0.4002s, Iter time: 2.0347s, Avg iter time: 3.4318s, Time Left 28.57h.
+[Iteration 00025] Data time: 1.2034s, Iter time: 2.8371s, Avg iter time: 3.4089s, Time Left 28.38h.
+[Iteration 00026] Data time: 1.3796s, Iter time: 3.0137s, Avg iter time: 3.3943s, Time Left 28.26h.
+[Iteration 00027] Data time: 0.8134s, Iter time: 2.4488s, Avg iter time: 3.3605s, Time Left 27.98h.
+[Iteration 00028] Data time: 1.0914s, Iter time: 2.7258s, Avg iter time: 3.3386s, Time Left 27.79h.
+[Iteration 00029] Data time: 0.1735s, Iter time: 1.8071s, Avg iter time: 3.2876s, Time Left 27.37h.
+[Iteration 00030] Data time: 0.8189s, Iter time: 2.4554s, Avg iter time: 3.2607s, Time Left 27.14h.
+[Iteration 00031] Data time: 0.5044s, Iter time: 2.1391s, Avg iter time: 3.2257s, Time Left 26.85h.
+[Iteration 00032] Data time: 0.9457s, Iter time: 2.5793s, Avg iter time: 3.2061s, Time Left 26.69h.
+[Iteration 00033] Data time: 1.0156s, Iter time: 2.6516s, Avg iter time: 3.1898s, Time Left 26.55h.

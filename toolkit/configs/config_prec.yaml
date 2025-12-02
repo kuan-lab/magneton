@@ -1,0 +1,33 @@
+paths:
+  input: "/gpfs/radev/home/zz545/project/magneton/outputs/test.tif"  # Input data path, tif/h5 format
+  output: "/gpfs/radev/home/zz545/project/magneton/outputs/test_prec"     # Output data path, precomputed format
+
+input_format: "tif"                 # Input format "tif" or "h5"
+h5:                                 # If input format is h5
+  datasets: ["vol0",]               # Dataset of h5
+roi: null                           # Select the RoI of iuput data: [x, y, w, h], default if null (all)
+prec_info:                          # Output: precomputed data info
+  lazy: false                       # Lazy load mode to save memeory
+  num_channels: 3                   # Number of output channel
+  layer_type: "image"               # Data Tpye: 'image' or 'segmentation'
+  data_type: "uint8"               # Can pick any popular uint
+  encoding: "raw"                   # Other options: 'jpeg', 'compressed_segmentation' (req. uint32 or uint64)
+  resolution: [12, 12, 12]       # X,Y,Z values in nanometers
+  voxel_offset: [0, 0, 0]           # Values X,Y,Z values in voxels
+  chunk_size: [64, 64, 64]          # Rechunk of image X,Y,Z in voxels
+  compress: false                   # Compressed storage
+
+hpc:                                # HPC submission cnfiguration
+  enable: true                      # Enable switch
+  scheduler: "slurm"                # "slurm" 
+  job_dir: "magneton/jobs/convert"      # Directory for generating scripts and lists
+  python_bin: "python"              # Python path
+  time: "00:30:00"                  # Time for each task
+  cpus: 4                          # Cpu number 
+  mem: "4G"                         # Mem per cpu
+  partition: "devel"                  # Partition
+  extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+  conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+  env: "pytc"                                                         # Name of conda env
+  work_path: .                      # Work Path, should be the magneton floder
+

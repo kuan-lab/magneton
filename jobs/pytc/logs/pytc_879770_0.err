@@ -1,0 +1,5 @@
+/gpfs/radev/home/zz545/miniconda3/envs/pytc/lib/python3.9/site-packages/pandas/core/computation/expressions.py:21: UserWarning: Pandas requires version '2.8.4' or newer of 'numexpr' (version '2.7.3' currently installed).
+  from pandas.core.computation.check import NUMEXPR_INSTALLED
+/gpfs/radev/project/kuan/zz545/pytorch_connectomics/connectomics/engine/trainer.py:109: FutureWarning: `torch.cuda.amp.autocast(args...)` is deprecated. Please use `torch.amp.autocast('cuda', args...)` instead.
+  with autocast(enabled=self.cfg.MODEL.MIXED_PRECESION):
+slurmstepd: error: *** JOB 879770 ON r4519u01n01 CANCELLED AT 2025-11-04T14:19:56 ***

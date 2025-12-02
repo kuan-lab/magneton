@@ -1,0 +1,19 @@
+rank: None, device: cuda, seed: 0
+
+PyTorch: 2.8.0+cu128
+Output directory: outputs/test
+Full config saved to outputs/test/config.yaml
+Return feature maps from 3D U-Net? False
+model:  UNet3D
+Parallelism with DataParallel.
+Optimizer:  SGD
+Sample size required for the augmentor: [ 19 372 372]
+Channel split rule for prediction:  [3]
+Channel split rule for prediction:  [3]
+Mode:  train
+None 1 ['train-input-bin2.tif']
+None 1 ['train-label-bin2.tif']
+volume shape (original): (512, 512, 512)
+volume shape (after scaling and padding): (520, 640, 640)
+label shape (after scaling and padding): (520, 640, 640)
+Total number of samples to be generated:  36325222

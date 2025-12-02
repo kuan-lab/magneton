@@ -1,0 +1,85 @@
+SYSTEM:
+  NUM_GPUS: 1
+  NUM_CPUS: 1
+AUGMENTOR:
+  SMOOTH: false
+MODEL:
+  INPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  OUTPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  IN_PLANES: 1
+  OUT_PLANES: 3
+  TARGET_OPT:
+  - '2'
+  LABEL_EROSION: 0
+  LOSS_OPTION:
+  - - WeightedBCEWithLogitsLoss
+    - DiceLoss
+  LOSS_WEIGHT:
+  - - 1.0
+    - 0.5
+  WEIGHT_OPT:
+  - - '1'
+    - '0'
+  OUTPUT_ACT:
+  - - none
+    - sigmoid
+  FILTERS:
+  - 32
+  - 64
+  - 96
+  - 128
+  - 160
+  NORM_MODE: gn
+DATASET:
+  IMAGE_NAME: train-input-bin2.tif
+  LABEL_NAME: train-label-bin2.tif
+  INPUT_PATH: /gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/pretrain
+  OUTPUT_PATH: outputs/test
+  PAD_SIZE:
+  - 4
+  - 64
+  - 64
+SOLVER:
+  LR_SCHEDULER_NAME: ReduceLROnPlateau
+  GAMMA: 0.5
+  BASE_LR: 0.0001
+  ITERATION_RESTART: true
+  ITERATION_STEP: 1
+  ITERATION_SAVE: 500
+  ITERATION_TOTAL: 30000
+  SAMPLES_PER_BATCH: 8
+MONITOR:
+  ITERATION_NUM:
+  - 200
+  - 1000
+INFERENCE:
+  INPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  OUTPUT_SIZE:
+  - 17
+  - 257
+  - 257
+  OUTPUT_ACT:
+  - sigmoid
+  IMAGE_NAME: train-input-bin2.tif
+  OUTPUT_PATH: outputs/test
+  OUTPUT_NAME: train-input-bin2.h5
+  PAD_SIZE:
+  - 4
+  - 32
+  - 32
+  AUG_MODE: min
+  AUG_NUM: None
+  STRIDE:
+  - 8
+  - 128
+  - 128
+  SAMPLES_PER_BATCH: 2

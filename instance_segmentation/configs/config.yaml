@@ -1,0 +1,79 @@
+paths:
+  input: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/affinity_map_bin8"                                                                                 # Input data path, precomputed format
+  output: "file://gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/251020_test/full"                              # Output of merged data path, precomputed format
+  output_local_base: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/251020_test/blocks/full_block"       # Output of chunk data path, precomputed format
+
+mask:
+  flag: false      # Enable switch
+  path: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_full_pred_stitched/affinity_map_mask_bin2_neuron_mask"     # Mask data path, precomputed format
+  
+checkpoint:
+  segmentation_dir: "magneton/checkpoints/segmentation"  # Checkpoint folder for segmentation
+  merge_dir: "magneton/checkpoints/merge"                # Checkpoint folder for aggregation
+
+block:
+  size: [512, 512, 512]                           # Block size: z, y, x
+  overlap: [128, 128, 128]                        # Overlap area size: z, y, x
+
+segmentation_stage:                               
+  parallel: true                                  # Parallel processing      
+  workers: 4                                      # Number of parallel processes
+  metadata_dir: "magneton/seg_metadata"         # Metadata folder
+  mip: 0                                          # Mip of input
+  thresholds: [0.3]                               # Segmentation parameters: the smaller the value, the fewer merges
+  aff_thresholds: [0.00001, 0.99999]              # Affinity graph enhancement: Retain only within the interval
+  supervoxel: "3d"                                # Supervoxel type:3d or 2d               
+  
+  interior_threshold: 0.1                         # 3D Supervoxel: initial seed region selection
+  min_distance: 3                                 # 3D Supervoxel: minimum distance between seeds
+  
+  method: "maxima_distance"                       # 2D Supervoxel: seed generation method
+  merge_function: 'aff50_his256'                  # 2D Supervoxel: supervoxel merge rule
+  
+  hpc:                                            # HPC submission configuration
+    enable: true                                  # Enable switch
+    scheduler: "slurm"                            # "slurm" 
+    job_dir: "magneton/jobs/seg"            # Directory for generating scripts and lists
+    blocks_per_job: 1                             # The number of blocks in an HPC node
+    workers_per_job: 1                            # Number of parallel workers launched per job within the node
+    hpc_num: 4                                    # Number of hpc node
+    python_bin: "python"                          # Python path
+    time: "00:30:00"                              # Time for each task
+    cpus: 16                                      # Cpu number 
+    mem: "4G"                                     # Mem per cpu
+    partition: "day"                              # Partition
+    extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+    conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+    env: "pytc"                                                         # Name of conda env
+    work_path: .                                 # Work Path
+
+merge_stage:
+  metadata_dir: "magneton/merge_metadata"                # Folder of metadata 
+  mip: 0                                          # Mip of chunks/inputs 
+  min_overlap_vox: 5                              # Minimum intersection volume (pixel)
+  min_frac_local: 0.5                             # Minimum intersecting volume relative to its own intersecting volume
+  min_frac_global: 0.5                            # Minimum intersecting volume relative to global intersecting volume
+  max_voxel_size: 1500000                         # Maximum merge volume size
+  require_recip: false                            # Deprecated
+  allow_union_amb: true                           # Merge all eligible items
+  dom_ratio: 1.0                                  # Deprecated
+  min_iou: 0.5                                    # Deprecated
+  export_tif:             
+    enable: true                                  # Enable switch
+    path: "preview.tif"                           # Tif name
+    max_slices: 20000                             # Number of slices
+  hpc:                                            # HPC submission configuration
+    enable: true                                  # Enable switch
+    scheduler: "slurm"                            # "slurm" 
+    job_dir: "magneton/jobs/merge"            # Directory for generating scripts and lists
+    blocks_per_job: 1                             # The number of blocks in an HPC node
+    workers_per_job: 1                            # Number of parallel workers launched per job within the node
+    python_bin: "python"                          # Python path
+    time: "00:30:00"                              # Time for each task
+    cpus: 16                                      # Cpu number 
+    mem: "4G"                                     # Mem per cpu
+    partition: "day"                              # Partition
+    extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+    conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+    env: "pytc"                                                         # Name of conda env
+    work_path: .                                 # Work Path

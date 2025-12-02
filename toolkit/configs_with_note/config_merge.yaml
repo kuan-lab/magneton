@@ -1,0 +1,20 @@
+merge:
+  input: "/gpfs/radev/project/kuan/zz545/outputs/test"        # Input path, precomputed/tif format
+  output: "/gpfs/radev/project/kuan/zz545/outputs/test.tif"   # Output path
+  chunk_size: [512, 512, 512]   # chunk size [z, y, x]
+  overlap: [64, 64, 64]         # overlap size [z, y, x]
+
+
+hpc:                                # HPC submission cnfiguration
+  enable: true                      # Enable switch
+  scheduler: "slurm"                # "slurm" 
+  job_dir: "magneton/jobs/merge"      # Directory for generating scripts and lists
+  python_bin: "python"              # Python path
+  time: "00:30:00"                  # Time for each task
+  cpus: 16                          # Cpu number 
+  mem: "4G"                         # Mem per cpu
+  partition: "day"                  # Partition
+  extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+  conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+  env: "pytc"                                                         # Name of conda env
+  work_path: .                       # Work Path

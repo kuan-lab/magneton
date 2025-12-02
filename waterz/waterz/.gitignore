@@ -1,0 +1,10 @@
+build
+*.c
+*.so
+frontend.cpp
+*.pyc
+*/build
+*/*.c
+*/*.so
+._*
+.DS_Store

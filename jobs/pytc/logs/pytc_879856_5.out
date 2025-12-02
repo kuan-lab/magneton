@@ -1,0 +1,295 @@
+rank: None, device: cuda, seed: 0
+
+PyTorch: 2.8.0+cu128
+Output directory: outputs/test
+Full config saved to outputs/test/config.yaml
+Return feature maps from 3D U-Net? False
+model:  UNet3D
+Parallelism with DataParallel.
+Load pretrained checkpoint:  /gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/pretrain_checkpoint/checkpoint_110000.pth.tar
+checkpoints:  dict_keys(['iteration', 'state_dict', 'optimizer', 'lr_scheduler'])
+Channel split rule for prediction:  [3]
+Mode:  test
+None 1 ['chunk_z00_y02_x03.tif']
+volume shape (original): (512, 512, 306)
+volume shape (after scaling and padding): (520, 576, 370)
+Total number of samples to be generated:  512
+Total number of batches:  256
+progress: 1/256 batches, total time 0.00s
+| ID | Name                  | Serial        | UUID                                     || GPU temp. | GPU util. | Memory util. || Memory total | Memory used | Memory free || Display mode | Display active |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  0 | NVIDIA A100 80GB PCIe | 1653523059038 | GPU-fce5084c-5397-92df-26da-b25fa775c3ac ||       40C |      100% |           2% ||      81920MB |      1963MB |     79191MB || Enabled      | Disabled       |
+progress: 2/256 batches, total time 2.11s
+progress: 3/256 batches, total time 2.29s
+progress: 4/256 batches, total time 2.47s
+progress: 5/256 batches, total time 2.65s
+progress: 6/256 batches, total time 2.82s
+progress: 7/256 batches, total time 3.00s
+progress: 8/256 batches, total time 3.17s
+progress: 9/256 batches, total time 3.35s
+progress: 10/256 batches, total time 3.53s
+progress: 11/256 batches, total time 3.70s
+progress: 12/256 batches, total time 3.88s
+progress: 13/256 batches, total time 4.06s
+progress: 14/256 batches, total time 4.23s
+progress: 15/256 batches, total time 4.41s
+progress: 16/256 batches, total time 4.58s
+progress: 17/256 batches, total time 4.76s
+progress: 18/256 batches, total time 4.94s
+progress: 19/256 batches, total time 5.11s
+progress: 20/256 batches, total time 5.29s
+progress: 21/256 batches, total time 5.46s
+progress: 22/256 batches, total time 5.64s
+progress: 23/256 batches, total time 5.82s
+progress: 24/256 batches, total time 5.99s
+progress: 25/256 batches, total time 6.17s
+progress: 26/256 batches, total time 6.35s
+progress: 27/256 batches, total time 6.52s
+progress: 28/256 batches, total time 6.70s
+progress: 29/256 batches, total time 6.87s
+progress: 30/256 batches, total time 7.05s
+progress: 31/256 batches, total time 7.23s
+progress: 32/256 batches, total time 7.40s
+progress: 33/256 batches, total time 7.58s
+progress: 34/256 batches, total time 7.75s
+progress: 35/256 batches, total time 7.93s
+progress: 36/256 batches, total time 8.11s
+progress: 37/256 batches, total time 8.28s
+progress: 38/256 batches, total time 8.46s
+progress: 39/256 batches, total time 8.64s
+progress: 40/256 batches, total time 8.81s
+progress: 41/256 batches, total time 8.99s
+progress: 42/256 batches, total time 9.16s
+progress: 43/256 batches, total time 9.34s
+progress: 44/256 batches, total time 9.52s
+progress: 45/256 batches, total time 9.69s
+progress: 46/256 batches, total time 9.87s
+progress: 47/256 batches, total time 10.05s
+progress: 48/256 batches, total time 10.22s
+progress: 49/256 batches, total time 10.40s
+progress: 50/256 batches, total time 10.57s
+progress: 51/256 batches, total time 10.75s
+| ID | Name                  | Serial        | UUID                                     || GPU temp. | GPU util. | Memory util. || Memory total | Memory used | Memory free || Display mode | Display active |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  0 | NVIDIA A100 80GB PCIe | 1653523059038 | GPU-fce5084c-5397-92df-26da-b25fa775c3ac ||       42C |       88% |           3% ||      81920MB |      2519MB |     78635MB || Enabled      | Disabled       |
+progress: 52/256 batches, total time 11.02s
+progress: 53/256 batches, total time 11.19s
+progress: 54/256 batches, total time 11.37s
+progress: 55/256 batches, total time 11.55s
+progress: 56/256 batches, total time 11.72s
+progress: 57/256 batches, total time 11.90s
+progress: 58/256 batches, total time 12.08s
+progress: 59/256 batches, total time 12.27s
+progress: 60/256 batches, total time 12.44s
+progress: 61/256 batches, total time 12.62s
+progress: 62/256 batches, total time 12.79s
+progress: 63/256 batches, total time 12.97s
+progress: 64/256 batches, total time 13.15s
+progress: 65/256 batches, total time 13.32s
+progress: 66/256 batches, total time 13.50s
+progress: 67/256 batches, total time 13.68s
+progress: 68/256 batches, total time 13.85s
+progress: 69/256 batches, total time 14.03s
+progress: 70/256 batches, total time 14.21s
+progress: 71/256 batches, total time 14.38s
+progress: 72/256 batches, total time 14.56s
+progress: 73/256 batches, total time 14.73s
+progress: 74/256 batches, total time 14.91s
+progress: 75/256 batches, total time 15.09s
+progress: 76/256 batches, total time 15.26s
+progress: 77/256 batches, total time 15.44s
+progress: 78/256 batches, total time 15.62s
+progress: 79/256 batches, total time 15.79s
+progress: 80/256 batches, total time 15.97s
+progress: 81/256 batches, total time 16.14s
+progress: 82/256 batches, total time 16.32s
+progress: 83/256 batches, total time 16.50s
+progress: 84/256 batches, total time 16.67s
+progress: 85/256 batches, total time 16.85s
+progress: 86/256 batches, total time 17.03s
+progress: 87/256 batches, total time 17.20s
+progress: 88/256 batches, total time 17.38s
+progress: 89/256 batches, total time 17.55s
+progress: 90/256 batches, total time 17.73s
+progress: 91/256 batches, total time 17.91s
+progress: 92/256 batches, total time 18.08s
+progress: 93/256 batches, total time 18.26s
+progress: 94/256 batches, total time 18.43s
+progress: 95/256 batches, total time 18.61s
+progress: 96/256 batches, total time 18.79s
+progress: 97/256 batches, total time 18.96s
+progress: 98/256 batches, total time 19.14s
+progress: 99/256 batches, total time 19.32s
+progress: 100/256 batches, total time 19.49s
+progress: 101/256 batches, total time 19.67s
+| ID | Name                  | Serial        | UUID                                     || GPU temp. | GPU util. | Memory util. || Memory total | Memory used | Memory free || Display mode | Display active |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  0 | NVIDIA A100 80GB PCIe | 1653523059038 | GPU-fce5084c-5397-92df-26da-b25fa775c3ac ||       44C |       88% |           3% ||      81920MB |      2519MB |     78635MB || Enabled      | Disabled       |
+progress: 102/256 batches, total time 19.92s
+progress: 103/256 batches, total time 20.10s
+progress: 104/256 batches, total time 20.28s
+progress: 105/256 batches, total time 20.46s
+progress: 106/256 batches, total time 20.63s
+progress: 107/256 batches, total time 20.81s
+progress: 108/256 batches, total time 20.98s
+progress: 109/256 batches, total time 21.16s
+progress: 110/256 batches, total time 21.34s
+progress: 111/256 batches, total time 21.51s
+progress: 112/256 batches, total time 21.69s
+progress: 113/256 batches, total time 21.86s
+progress: 114/256 batches, total time 22.04s
+progress: 115/256 batches, total time 22.22s
+progress: 116/256 batches, total time 22.39s
+progress: 117/256 batches, total time 22.57s
+progress: 118/256 batches, total time 22.74s
+progress: 119/256 batches, total time 22.92s
+progress: 120/256 batches, total time 23.10s
+progress: 121/256 batches, total time 23.27s
+progress: 122/256 batches, total time 23.45s
+progress: 123/256 batches, total time 23.62s
+progress: 124/256 batches, total time 23.80s
+progress: 125/256 batches, total time 23.98s
+progress: 126/256 batches, total time 24.15s
+progress: 127/256 batches, total time 24.33s
+progress: 128/256 batches, total time 24.51s
+progress: 129/256 batches, total time 24.68s
+progress: 130/256 batches, total time 24.86s
+progress: 131/256 batches, total time 25.04s
+progress: 132/256 batches, total time 25.21s
+progress: 133/256 batches, total time 25.39s
+progress: 134/256 batches, total time 25.56s
+progress: 135/256 batches, total time 25.74s
+progress: 136/256 batches, total time 25.92s
+progress: 137/256 batches, total time 26.09s
+progress: 138/256 batches, total time 26.27s
+progress: 139/256 batches, total time 26.44s
+progress: 140/256 batches, total time 26.62s
+progress: 141/256 batches, total time 26.80s
+progress: 142/256 batches, total time 26.97s
+progress: 143/256 batches, total time 27.15s
+progress: 144/256 batches, total time 27.32s
+progress: 145/256 batches, total time 27.50s
+progress: 146/256 batches, total time 27.68s
+progress: 147/256 batches, total time 27.85s
+progress: 148/256 batches, total time 28.03s
+progress: 149/256 batches, total time 28.20s
+progress: 150/256 batches, total time 28.38s
+progress: 151/256 batches, total time 28.56s
+| ID | Name                  | Serial        | UUID                                     || GPU temp. | GPU util. | Memory util. || Memory total | Memory used | Memory free || Display mode | Display active |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  0 | NVIDIA A100 80GB PCIe | 1653523059038 | GPU-fce5084c-5397-92df-26da-b25fa775c3ac ||       46C |       88% |           3% ||      81920MB |      2519MB |     78635MB || Enabled      | Disabled       |
+progress: 152/256 batches, total time 28.81s
+progress: 153/256 batches, total time 28.98s
+progress: 154/256 batches, total time 29.16s
+progress: 155/256 batches, total time 29.34s
+progress: 156/256 batches, total time 29.51s
+progress: 157/256 batches, total time 29.69s
+progress: 158/256 batches, total time 29.86s
+progress: 159/256 batches, total time 30.04s
+progress: 160/256 batches, total time 30.22s
+progress: 161/256 batches, total time 30.39s
+progress: 162/256 batches, total time 30.57s
+progress: 163/256 batches, total time 30.75s
+progress: 164/256 batches, total time 30.92s
+progress: 165/256 batches, total time 31.10s
+progress: 166/256 batches, total time 31.28s
+progress: 167/256 batches, total time 31.45s
+progress: 168/256 batches, total time 31.63s
+progress: 169/256 batches, total time 31.80s
+progress: 170/256 batches, total time 31.98s
+progress: 171/256 batches, total time 32.16s
+progress: 172/256 batches, total time 32.33s
+progress: 173/256 batches, total time 32.51s
+progress: 174/256 batches, total time 32.69s
+progress: 175/256 batches, total time 32.86s
+progress: 176/256 batches, total time 33.04s
+progress: 177/256 batches, total time 33.21s
+progress: 178/256 batches, total time 33.39s
+progress: 179/256 batches, total time 33.57s
+progress: 180/256 batches, total time 33.74s
+progress: 181/256 batches, total time 33.92s
+progress: 182/256 batches, total time 34.09s
+progress: 183/256 batches, total time 34.27s
+progress: 184/256 batches, total time 34.45s
+progress: 185/256 batches, total time 34.62s
+progress: 186/256 batches, total time 34.80s
+progress: 187/256 batches, total time 34.97s
+progress: 188/256 batches, total time 35.15s
+progress: 189/256 batches, total time 35.33s
+progress: 190/256 batches, total time 35.50s
+progress: 191/256 batches, total time 35.68s
+progress: 192/256 batches, total time 35.85s
+progress: 193/256 batches, total time 36.03s
+progress: 194/256 batches, total time 36.21s
+progress: 195/256 batches, total time 36.38s
+progress: 196/256 batches, total time 36.56s
+progress: 197/256 batches, total time 36.73s
+progress: 198/256 batches, total time 36.91s
+progress: 199/256 batches, total time 37.09s
+progress: 200/256 batches, total time 37.26s
+progress: 201/256 batches, total time 37.44s
+| ID | Name                  | Serial        | UUID                                     || GPU temp. | GPU util. | Memory util. || Memory total | Memory used | Memory free || Display mode | Display active |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  0 | NVIDIA A100 80GB PCIe | 1653523059038 | GPU-fce5084c-5397-92df-26da-b25fa775c3ac ||       51C |       66% |           3% ||      81920MB |      2519MB |     78635MB || Enabled      | Disabled       |
+progress: 202/256 batches, total time 37.70s
+progress: 203/256 batches, total time 37.88s
+progress: 204/256 batches, total time 38.05s
+progress: 205/256 batches, total time 38.23s
+progress: 206/256 batches, total time 38.41s
+progress: 207/256 batches, total time 38.58s
+progress: 208/256 batches, total time 38.76s
+progress: 209/256 batches, total time 38.93s
+progress: 210/256 batches, total time 39.11s
+progress: 211/256 batches, total time 39.29s
+progress: 212/256 batches, total time 39.46s
+progress: 213/256 batches, total time 39.64s
+progress: 214/256 batches, total time 39.81s
+progress: 215/256 batches, total time 39.99s
+progress: 216/256 batches, total time 40.17s
+progress: 217/256 batches, total time 40.34s
+progress: 218/256 batches, total time 40.52s
+progress: 219/256 batches, total time 40.70s
+progress: 220/256 batches, total time 40.87s
+progress: 221/256 batches, total time 41.05s
+progress: 222/256 batches, total time 41.22s
+progress: 223/256 batches, total time 41.40s
+progress: 224/256 batches, total time 41.58s
+progress: 225/256 batches, total time 41.75s
+progress: 226/256 batches, total time 41.93s
+progress: 227/256 batches, total time 42.10s
+progress: 228/256 batches, total time 42.28s
+progress: 229/256 batches, total time 42.46s
+progress: 230/256 batches, total time 42.63s
+progress: 231/256 batches, total time 42.81s
+progress: 232/256 batches, total time 42.98s
+progress: 233/256 batches, total time 43.16s
+progress: 234/256 batches, total time 43.34s
+progress: 235/256 batches, total time 43.51s
+progress: 236/256 batches, total time 43.69s
+progress: 237/256 batches, total time 43.87s
+progress: 238/256 batches, total time 44.04s
+progress: 239/256 batches, total time 44.22s
+progress: 240/256 batches, total time 44.39s
+progress: 241/256 batches, total time 44.57s
+progress: 242/256 batches, total time 44.75s
+progress: 243/256 batches, total time 44.92s
+progress: 244/256 batches, total time 45.10s
+progress: 245/256 batches, total time 45.28s
+progress: 246/256 batches, total time 45.45s
+progress: 247/256 batches, total time 45.63s
+progress: 248/256 batches, total time 45.80s
+progress: 249/256 batches, total time 45.98s
+progress: 250/256 batches, total time 46.16s
+progress: 251/256 batches, total time 46.33s
+| ID | Name                  | Serial        | UUID                                     || GPU temp. | GPU util. | Memory util. || Memory total | Memory used | Memory free || Display mode | Display active |
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+|  0 | NVIDIA A100 80GB PCIe | 1653523059038 | GPU-fce5084c-5397-92df-26da-b25fa775c3ac ||       52C |       88% |           3% ||      81920MB |      2519MB |     78635MB || Enabled      | Disabled       |
+progress: 252/256 batches, total time 46.60s
+progress: 253/256 batches, total time 46.77s
+progress: 254/256 batches, total time 46.95s
+progress: 255/256 batches, total time 47.13s
+progress: 256/256 batches, total time 47.30s
+Prediction time: 47.50s
+Final prediction shapes are:
+(3, 512, 512, 306)
+Prediction saved as:  outputs/test/chunk_z00_y02_x03.h5

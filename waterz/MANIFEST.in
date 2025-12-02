@@ -1,0 +1,6 @@
+include README.md
+recursive-include waterz *.hpp
+recursive-include waterz *.pyx
+recursive-include waterz *.h
+include waterz/frontend_agglomerate.*
+include waterz/agglomerate.pyx

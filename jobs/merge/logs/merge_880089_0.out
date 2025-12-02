@@ -1,0 +1,20 @@
+[INFO] Expected grid 1×4×4, full shape (512, 1856, 1856)
+[INFO] Inserted chunk z0_y0_x0 → Z[0:512] Y[0:512] X[0:512]
+[INFO] Inserted chunk z0_y0_x1 → Z[0:512] Y[0:512] X[448:960]
+[INFO] Inserted chunk z0_y0_x2 → Z[0:512] Y[0:512] X[896:1408]
+[INFO] Inserted chunk z0_y0_x3 → Z[0:512] Y[0:512] X[1344:1650]
+[INFO] Inserted chunk z0_y1_x0 → Z[0:512] Y[448:960] X[0:512]
+[INFO] Inserted chunk z0_y1_x1 → Z[0:512] Y[448:960] X[448:960]
+[INFO] Inserted chunk z0_y1_x2 → Z[0:512] Y[448:960] X[896:1408]
+[INFO] Inserted chunk z0_y1_x3 → Z[0:512] Y[448:960] X[1344:1650]
+[INFO] Inserted chunk z0_y2_x0 → Z[0:512] Y[896:1408] X[0:512]
+[INFO] Inserted chunk z0_y2_x1 → Z[0:512] Y[896:1408] X[448:960]
+[INFO] Inserted chunk z0_y2_x2 → Z[0:512] Y[896:1408] X[896:1408]
+[INFO] Inserted chunk z0_y2_x3 → Z[0:512] Y[896:1408] X[1344:1650]
+[INFO] Inserted chunk z0_y3_x0 → Z[0:512] Y[1344:1840] X[0:512]
+[INFO] Inserted chunk z0_y3_x1 → Z[0:512] Y[1344:1840] X[448:960]
+[INFO] Inserted chunk z0_y3_x2 → Z[0:512] Y[1344:1840] X[896:1408]
+[INFO] Inserted chunk z0_y3_x3 → Z[0:512] Y[1344:1840] X[1344:1650]
+[INFO] Trimmed zero-padding → Z[0:512] Y[0:1840] X[0:1650] => shape (3, 512, 1840, 1650)
+[INFO] Saved merged volume: /gpfs/radev/home/zz545/project/magneton/outputs/test.tif
+[INFO] Merge complete.

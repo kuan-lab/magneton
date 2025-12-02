@@ -1,0 +1,20 @@
+mask:
+  raw_path: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/affinity_map_bin4"     # Raw data path, precomputed format
+  mask_path: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/affinity_map_bin4"    # Mask data path, precomputed format
+  output_path: "file:///gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/chunks_pred_stitched/affinity_map_bin4"  # Ouutput path, precomputed format
+  mip: 0                            # Mip of raw data
+
+
+hpc:                                # HPC submission cnfiguration
+  enable: true                      # Enable switch
+  scheduler: "slurm"                # "slurm" 
+  job_dir: "magneton/jobs/mask_prec"      # Directory for generating scripts and lists
+  python_bin: "python"              # Python path
+  time: "00:30:00"                  # Time for each task
+  cpus: 16                          # Cpu number 
+  mem: "4G"                         # Mem per cpu
+  partition: "day"                  # Partition
+  extra_modules: ["StdEnv", ]                                         # List of modules requiring loading
+  conda: "/gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh"   # Path of conda
+  env: "pytc"                                                         # Name of conda env
+  work_path: .                      # Work Path, should be the magneton floder

@@ -1,0 +1,20 @@
+hpc:
+  enable: true
+  scheduler: slurm
+  job_dir: magneton/jobs/pytc
+  python_bin: python
+  time: 00:30:00
+  gpus: a100:1
+  cpus: 12
+  mem-per-gpu: 64G
+  partition: gpu
+  extra_modules:
+  - StdEnv
+  conda: /gpfs/radev/home/zz545/miniconda3/etc/profile.d/conda.sh
+  env: pytc
+  work_path: .
+  mutil_jobs: true
+  mutil_jobs_configs:
+    configs_save_path: magneton/pytorch_connectomics/configs/mutil
+    input_floder: /gpfs/marilyn/pi/kuan/shared/FIB_SEM/WORM/raw/test2
+    batch_num: 4
