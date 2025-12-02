@@ -1,0 +1,237 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instance Segmentation &mdash; Magneton 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Processing Toolkit" href="../tutorials/toolkit.html" />
+    <link rel="prev" title="Virtual Environment" href="conda.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2a4d69" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Magneton
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-3-main-modules">Magneton consists of 3 main modules:</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="conda.html">Virtual Environment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="conda.html#download-miniconda-or-anaconda">Download Miniconda or Anaconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conda.html#run-the-installer">Run the Installer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conda.html#follow-the-installation-prompts">Follow the Installation Prompts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conda.html#activate-conda">Activate Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="conda.html#verify-installation">Verify Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#create-a-virtual-environment">Create a Virtual Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#install-magneton">Install Magneton</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#install-all-modules">Install All Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#install-affinity-maps-inference-module">Install Affinity Maps Inference Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#install-waterz">Install Waterz</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/toolkit.html">Processing Toolkit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/toolkit.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/toolkit.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/toolkit.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/toolkit.html#data-preprocessing-and-postprocessing">Data preprocessing and postprocessing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/aff.html">Affinity Map Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/aff.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/aff.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/aff.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/aff.html#model-pretraining">Model pretraining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/aff.html#model-fine-tuning">Model fine-tuning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/aff.html#model-inference">Model inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../tutorials/ins.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/ins.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../tutorials/ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/ins.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/ins.html#status">Status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../tutorials/ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2a4d69" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Magneton</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Instance Segmentation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/installation/magneton.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="instance-segmentation">
+<h1>Instance Segmentation<a class="headerlink" href="#instance-segmentation" title="Link to this heading"></a></h1>
+<p>After installing conda, we need to configure Magneton environment.</p>
+<blockquote>
+<div><p>Based on Linux machines with NVIDIA GPUs</p>
+</div></blockquote>
+<section id="create-a-virtual-environment">
+<h2>Create a Virtual Environment<a class="headerlink" href="#create-a-virtual-environment" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>magneton<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.9
+conda<span class="w"> </span>activate<span class="w"> </span>magneton
+</pre></div>
+</div>
+<p>Install pytorch with right cuda version (for H100 or A100: usually 12.4):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>pytorch<span class="w"> </span>torchvision<span class="w"> </span>torchaudio<span class="w"> </span>pytorch-cuda<span class="o">=</span><span class="m">12</span>.4<span class="w"> </span>-c<span class="w"> </span>pytorch<span class="w"> </span>-c<span class="w"> </span>nvidia
+</pre></div>
+</div>
+</section>
+<section id="install-magneton">
+<h2>Install Magneton<a class="headerlink" href="#install-magneton" title="Link to this heading"></a></h2>
+<section id="install-all-modules">
+<h3>Install All Modules<a class="headerlink" href="#install-all-modules" title="Link to this heading"></a></h3>
+<p>We have made modifications based on pytc (<em>version 0.1</em>). This section covers the basics of how to download and install this version.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/kuan-lab/magneton.git
+<span class="nb">cd</span><span class="w"> </span>magneton
+pip<span class="w"> </span>install<span class="w"> </span>--editable<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="install-affinity-maps-inference-module">
+<h3>Install Affinity Maps Inference Module<a class="headerlink" href="#install-affinity-maps-inference-module" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>pytorch_connectomics
+pip<span class="w"> </span>install<span class="w"> </span>--editable<span class="w"> </span>.
+</pre></div>
+</div>
+</section>
+<section id="install-waterz">
+<h3>Install Waterz<a class="headerlink" href="#install-waterz" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>../waterz
+pip<span class="w"> </span>install<span class="w"> </span>--editable<span class="w"> </span>.
+</pre></div>
+</div>
+<p>If error: “waterz/backend/types.hpp:3:10: fatal error: boost/multi_array.hpp: No such file or directory”</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>boost
+</pre></div>
+</div>
+<p>If error: ModuleNotFoundError: No module named ‘Cython’</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>cython
+</pre></div>
+</div>
+<p>If error: ‘PyDataType_ELSIZE’ was not declared in this scope</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>--upgrade<span class="w"> </span>numpy
+</pre></div>
+</div>
+<p>If error: monai 1.4.0 requires numpy&lt;2.0, &gt;=1.24
+After waterz installed</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span><span class="nv">numpy</span><span class="o">==</span><span class="m">1</span>.26.4
+</pre></div>
+</div>
+<p>If error: no module named “mahotas”</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>mahotas
+</pre></div>
+</div>
+<p>If error: ImportError: … libstdc++.so.6: version `GLIBCXX_3.4.32’ not found ..</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>install<span class="w"> </span>-c<span class="w"> </span>conda-forge<span class="w"> </span>libstdcxx-ng
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="conda.html" class="btn btn-neutral float-left" title="Virtual Environment" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../tutorials/toolkit.html" class="btn btn-neutral float-right" title="Processing Toolkit" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, zhen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,273 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Processing Toolkit &mdash; Magneton 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Affinity Map Inference" href="aff.html" />
+    <link rel="prev" title="Instance Segmentation" href="../installation/magneton.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2a4d69" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Magneton
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-3-main-modules">Magneton consists of 3 main modules:</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/conda.html">Virtual Environment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#download-miniconda-or-anaconda">Download Miniconda or Anaconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#run-the-installer">Run the Installer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#follow-the-installation-prompts">Follow the Installation Prompts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#activate-conda">Activate Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#verify-installation">Verify Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/magneton.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#create-a-virtual-environment">Create a Virtual Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#install-magneton">Install Magneton</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-all-modules">Install All Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-affinity-maps-inference-module">Install Affinity Maps Inference Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-waterz">Install Waterz</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Processing Toolkit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-preprocessing-and-postprocessing">Data preprocessing and postprocessing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="aff.html">Affinity Map Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="aff.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aff.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-pretraining">Model pretraining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-fine-tuning">Model fine-tuning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-inference">Model inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ins.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#status">Status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2a4d69" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Magneton</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Processing Toolkit</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/toolkit.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="processing-toolkit">
+<h1>Processing Toolkit<a class="headerlink" href="#processing-toolkit" title="Link to this heading"></a></h1>
+<p>This tutorial provides step-by-step guidance for pre- and post- processing toolkit.</p>
+<blockquote>
+<div><p>Please use it as needed. If you have any new requirements, please <a class="reference internal" href="#zhen.zhang.zz545&#64;yale.edu"><span class="xref myst">let me know</span></a>.</p>
+</div></blockquote>
+<section id="main-menu">
+<h2>Main Menu<a class="headerlink" href="#main-menu" title="Link to this heading"></a></h2>
+<p>Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">magneton</span></code> to start the CLI.
+This interface displays the basic information of the current system. The main interface consists of 3 functional modules: processing toolkit, affinity map inference module and instance segmentation module.
+<img alt="Main" src="../_images/main.png" /></p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, enter the <strong>processing toolkit</strong> menu:
+<img alt="affinity map inference module" src="../_images/toolkit.png" /></p>
+</section>
+<section id="options">
+<h2>Options<a class="headerlink" href="#options" title="Link to this heading"></a></h2>
+<p>This module can be used for configuration, data preprocessing and postprocessing.</p>
+<section id="global-configuration">
+<h3>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">18</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, view current <strong>global configuration</strong>:
+<img alt="global configuration" src="../_images/gc.png" /></p>
+<p>For the title:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Section</span></code>: the configuration file for which module.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Parameter</span></code>: the key in configuration file.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Value</span></code>: the value of key</p></li>
+</ul>
+<p>For the keys in toolkit module:</p>
+<blockquote>
+<div><p>The details of the keys are specified in the YAML files.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">split</span></code>: the config file path for split tool.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">merge</span></code>: the config file path for merge tool.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">prec</span></code>: the config file path for the precomputed format converter.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">downsample</span></code>: the config file path for the precomputed data downsampling.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">gen_mask</span></code>: the config file path for mask generator of precomputed data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mask_prec</span></code>:  the config file path for masking of precomputed data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mask_tif</span></code>: the config file path for masking of tif data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">resize_tif</span></code>: the config file path for resizing of tif data.</p></li>
+</ul>
+<p>Input <code class="docutils literal notranslate"><span class="pre">17</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, edit current <strong>global configuration</strong>:</p>
+<blockquote>
+<div><p>Currently, only modifications are permitted; additions are not allowed.</p>
+</div></blockquote>
+<p>You can select a value to change:
+<img alt="select a value to change" src="../_images/gc1.png" /></p>
+</section>
+<section id="data-preprocessing-and-postprocessing">
+<h3>Data preprocessing and postprocessing<a class="headerlink" href="#data-preprocessing-and-postprocessing" title="Link to this heading"></a></h3>
+<p>The <strong>tool menu</strong>:
+<img alt="tool menu" src="../_images/toolkit.png" /></p>
+<section id="split-tool">
+<h4>Split tool<a class="headerlink" href="#split-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to split tif volume to tif blocks with overlap.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">2</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to split tif volume to tif blocks with overlap.</p>
+<p>The tool is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">split</span></code> in global configuration file).Before start the training, you can modify the configuration by CLI or any tools:
+<img alt="split" src="../_images/toolkit1.png" /></p>
+</section>
+<section id="merge-tool">
+<h4>Merge tool<a class="headerlink" href="#merge-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">3</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to merge h5 blocks (inference) to tif volume with overlap.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">4</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to merge h5 blocks (inference) to tif volume with overlap.</p>
+<p>The tool is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">merge</span></code> in global configuration file).Before start the training, you can modify the configuration by CLI or any tools:
+<img alt="merge" src="../_images/tool2.png" /></p>
+</section>
+<section id="convert-tool">
+<h4>Convert tool<a class="headerlink" href="#convert-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">5</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to convert tif/h5 data to precomputed format.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">6</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to convert tif/h5 data to precomputed format.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">prec</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+<section id="downsample-tool">
+<h4>Downsample tool<a class="headerlink" href="#downsample-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">7</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to create lower-resolution mipmap levels using voxel downsampling for precomputed data.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">8</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to create lower-resolution mipmap levels using voxel downsampling for precomputed data.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">downsample</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+<section id="mask-tool">
+<h4>Mask tool<a class="headerlink" href="#mask-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">9</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to generate binary masks from affinity maps.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">10</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to generate binary masks from affinity maps.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">gen_mask</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+<section id="mask-prec-tool">
+<h4>Mask Prec tool<a class="headerlink" href="#mask-prec-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">11</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to apply a mask to prec images, preserving structure.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">12</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to apply a mask to prec images, preserving structure.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">mask_prec</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+<section id="mask-tif-tool">
+<h4>Mask Tif tool<a class="headerlink" href="#mask-tif-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">13</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to apply a mask to tif images, preserving structure.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">14</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to apply a mask to tif images, preserving structure.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">mask_tif</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+<section id="resize-tif-tool">
+<h4>Resize TIf tool<a class="headerlink" href="#resize-tif-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">15</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to resize tif volumes to new voxel size or dimension.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">16</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to resize tif volumes to new voxel size or dimension.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">resize_tif</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../installation/magneton.html" class="btn btn-neutral float-left" title="Instance Segmentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="aff.html" class="btn btn-neutral float-right" title="Affinity Map Inference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, zhen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

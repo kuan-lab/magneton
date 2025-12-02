@@ -1,0 +1,230 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Affinity Map Inference &mdash; Magneton 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=9a2dae69"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Instance Segmentation" href="ins.html" />
+    <link rel="prev" title="Processing Toolkit" href="toolkit.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2a4d69" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Magneton
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-3-main-modules">Magneton consists of 3 main modules:</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/conda.html">Virtual Environment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#download-miniconda-or-anaconda">Download Miniconda or Anaconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#run-the-installer">Run the Installer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#follow-the-installation-prompts">Follow the Installation Prompts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#activate-conda">Activate Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#verify-installation">Verify Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/magneton.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#create-a-virtual-environment">Create a Virtual Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#install-magneton">Install Magneton</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-all-modules">Install All Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-affinity-maps-inference-module">Install Affinity Maps Inference Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-waterz">Install Waterz</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="toolkit.html">Processing Toolkit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="toolkit.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="toolkit.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="toolkit.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="toolkit.html#data-preprocessing-and-postprocessing">Data preprocessing and postprocessing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Affinity Map Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-pretraining">Model pretraining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-fine-tuning">Model fine-tuning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#model-inference">Model inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ins.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#status">Status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2a4d69" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Magneton</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Affinity Map Inference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/aff.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="affinity-map-inference">
+<h1>Affinity Map Inference<a class="headerlink" href="#affinity-map-inference" title="Link to this heading"></a></h1>
+<p>This tutorial provides step-by-step guidance for affinity map inference pipeline.</p>
+<blockquote>
+<div><p>This section is integration and encapsulation of pytc. For more detailed, please refer to <a class="reference external" href="https://connectomics.readthedocs.io/en/latest/tutorials/neuron.html">pytc document</a>.</p>
+</div></blockquote>
+<section id="main-menu">
+<h2>Main Menu<a class="headerlink" href="#main-menu" title="Link to this heading"></a></h2>
+<p>Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">magneton</span></code> to start the CLI.</p>
+<p><img alt="Main" src="../_images/main.png" /></p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">2</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, enter the <strong>affinity map inference module</strong>:
+<img alt="affinity map inference module" src="../_images/aff.png" /></p>
+</section>
+<section id="options">
+<h2>Options<a class="headerlink" href="#options" title="Link to this heading"></a></h2>
+<p>This module can be used for configuration, model pretraining, fine-tuning and inference.</p>
+<ul class="simple">
+<li><p>In pretraining: the model is pre-trained by inputting images and labeled images. This ultimately yields the pre-trained model parameters.</p></li>
+<li><p>In fine-tuning: for specific imaging data, fine-tune the model by inputting images and labeled images (often as mini-batches for a single bounding box). This process ultimately yields the final model parameters.</p></li>
+<li><p>In inference: inferring neuronal affinity maps for large-scale data using the final model.This process involves image blocking and stitching.</p></li>
+</ul>
+<section id="global-configuration">
+<h3>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading"></a></h3>
+<p>This section is identical to the previous configuration. Only an interface has been added to facilitate configuration.
+Input <code class="docutils literal notranslate"><span class="pre">9</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, view current <strong>global configuration</strong>:
+Input <code class="docutils literal notranslate"><span class="pre">8</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, edit current <strong>global configuration</strong>.</p>
+</section>
+<section id="model-pretraining">
+<h3>Model pretraining<a class="headerlink" href="#model-pretraining" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to pre train a model. The model is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">config_base</span></code> and <code class="docutils literal notranslate"><span class="pre">config_file</span></code>,  in global configuration file)</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">2</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to pre train a model. The model is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">config_base</span></code>, <code class="docutils literal notranslate"><span class="pre">config_file</span></code> and <code class="docutils literal notranslate"><span class="pre">hpc</span></code>,  in global configuration file)</p>
+<p>Before start the training, you can modify the configuration:
+<img alt="modify the configuration" src="../_images/aff11.png" /></p>
+<p>Then the pre-training will run automatically.</p>
+<blockquote>
+<div><p>You can use <code class="docutils literal notranslate"><span class="pre">Ctrl+C</span></code> to stop it and Enter main menu.</p>
+</div></blockquote>
+<p>When using <em><strong>HPC resources</strong></em>, you need to configure the hpc and the job will submit to the hpc based on this configuration:
+<img alt="modify the configuration" src="../_images/aff13.png" />
+You can change the parameters based on this CLI or <em><strong>directly modify the configuration file</strong></em>.</p>
+</section>
+<section id="model-fine-tuning">
+<h3>Model fine-tuning<a class="headerlink" href="#model-fine-tuning" title="Link to this heading"></a></h3>
+<p>This process is essentially the same as pre-training, except that it adds the checkpoint configuration.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">3</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to pre train a model. The model is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">config_base</span></code>, <code class="docutils literal notranslate"><span class="pre">config_file</span></code> and <code class="docutils literal notranslate"><span class="pre">checkpoint</span></code>,  in global configuration file)</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">4</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to pre train a model. The model is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">config_base</span></code>, <code class="docutils literal notranslate"><span class="pre">config_file</span></code>, <code class="docutils literal notranslate"><span class="pre">checkpoint</span></code> and <code class="docutils literal notranslate"><span class="pre">hpc</span></code>,  in global configuration file)</p>
+</section>
+<section id="model-inference">
+<h3>Model inference<a class="headerlink" href="#model-inference" title="Link to this heading"></a></h3>
+<p>This section is optimized for large datasets. We first need to use the split tool to split large TIF/Precomputed images into multiple smaller blocks and save them in the same folder. Then, this module performs parallel processing on the segmented data. After completing all the inference, use the merge tool to stitch them together.</p>
+<p>After encapsulation, the user experience remains consistent with the previous module:</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">5</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to pre train a model. The model is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">config_base</span></code>, <code class="docutils literal notranslate"><span class="pre">config_file</span></code> and <code class="docutils literal notranslate"><span class="pre">checkpoint</span></code>,  in global configuration file)</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">6</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to pre train a model. The model is based on the configuration files (<code class="docutils literal notranslate"><span class="pre">config_base</span></code>, <code class="docutils literal notranslate"><span class="pre">config_file</span></code>, <code class="docutils literal notranslate"><span class="pre">checkpoint</span></code> and <code class="docutils literal notranslate"><span class="pre">hpc</span></code>,  in global configuration file)</p>
+<p>However, for HPC configuration files, this <code class="docutils literal notranslate"><span class="pre">mutil_jobs</span></code> switch must be enabled and the <code class="docutils literal notranslate"><span class="pre">mutil_jobs_configs</span></code> must be correct.</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">configs_save_path</span></code>: subprofile storage location</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">input_floder</span></code>: the path of blocks</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">batch_num</span></code>: the number of blocks in parallel at once</p></li>
+</ul>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="toolkit.html" class="btn btn-neutral float-left" title="Processing Toolkit" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ins.html" class="btn btn-neutral float-right" title="Instance Segmentation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, zhen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
