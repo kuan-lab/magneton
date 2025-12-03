@@ -1,45 +1,34 @@
-from setuptools import setup
-from distutils.sysconfig import get_python_inc
-from setuptools.extension import Extension
-from Cython.Build import cythonize
-import numpy
-import os
+from setuptools import setup, find_packages
 
-source_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'waterz')
-include_dirs = [
-    source_dir,
-    os.path.join(source_dir, 'backend'),
-    os.path.dirname(get_python_inc()),
-    numpy.get_include(),
-]
-extensions = [
-    Extension(
-        'waterz.evaluate',
-        sources=['waterz/evaluate.pyx', 'waterz/frontend_evaluate.cpp'],
-        include_dirs=include_dirs,
-        language='c++',
-        extra_link_args=['-std=c++11'],
-        extra_compile_args=['-std=c++11', '-w'])
-]
+def read_requirements():
+    """Read requirements.txt and return as list."""
+    with open("requirements.txt") as f:
+        return [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
 setup(
-        name='waterz',
-        version='0.8',
-        description='Simple watershed and agglomeration for affinity graphs.',
-        url='https://github.com/donglaiw/waterz',
-        license='MIT',
-        requires=['cython','numpy','scipy'],
-        packages=['waterz'],
-        package_data={
-            '': [
-                'waterz/*.h',
-                'waterz/*.hpp',
-                'waterz/*.cpp',
-                'waterz/*.pyx',
-                'waterz/backend/*.hpp',
-            ]
-        },
-        include_package_data=True,
-        zip_safe=False,
-        ext_modules=cythonize(extensions)
+    name="magneton",
+    version="1.0.0",
+    author="Kuan Lab",
+    author_email="xxx",
+    description="Neuron segmentation and pipeline developed by Kuan Lab.",
+    long_description=open("README.md").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/kuan-lab/magneton.git",
+    license="MIT",
+    packages=find_packages(exclude=("tests", "docs")),
+    include_package_data=True,
+    install_requires=read_requirements(),
+    python_requires=">=3.8",
+    entry_points={
+        "console_scripts": [
+            "magneton=magneton.main:main",  # CLI entrypoint
+        ],
+    },
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: POSIX :: Linux",
+        "Intended Audience :: Science/Research",
+        "Topic :: Scientific/Engineering :: Image Recognition",
+    ],
 )
