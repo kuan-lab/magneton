@@ -1,0 +1,90 @@
+[build-system]
+requires = [
+	"setuptools>=69",
+	"wheel",
+	"Cython>=0.29",
+	"numpy>=1.20",
+	"setuptools-scm",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools_scm]
+
+[project]
+name = "waterz"
+dynamic = ["version"]
+description = "Simple watershed and agglomeration for affinity graphs."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+authors = [{ name = "Jan Funke" }, { name = "Jingpeng Wu" }]
+classifiers = [
+	"Programming Language :: Python :: 3",
+	"Programming Language :: Python :: 3.9",
+	"Programming Language :: Python :: 3.10",
+	"Programming Language :: Python :: 3.11",
+	"Programming Language :: Python :: 3.12",
+	"Programming Language :: Python :: 3.13",
+	"Operating System :: OS Independent",
+	"Typing :: Typed",
+]
+dependencies = ["numpy>=1.20", "witty[cython]>=0.3.1"]
+
+[project.urls]
+Homepage = "https://github.com/funkey/waterz"
+Repository = "https://github.com/funkey/waterz"
+Issues = "https://github.com/funkey/waterz/issues"
+
+[dependency-groups]
+dev = [
+	"pytest",
+	"coveralls",
+	"pytest-cov",
+	"pre-commit",
+	"ruff",
+	"numpy",
+	"ipython>=8.18.1",
+	"Cython>=0.29",
+	"setuptools",
+]
+
+[tool.uv.sources]
+waterz = { workspace = true }
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+waterz = ["*.pyx", "*.hpp", "*.h", "backend/*.hpp"]
+
+
+# https://docs.astral.sh/ruff/
+[tool.ruff]
+line-length = 95
+target-version = "py39"
+src = ["src", "tests"]
+fix = true
+unsafe-fixes = true
+
+[tool.ruff.lint]
+select = [
+	"E",    # style errors
+	"F",    # flakes
+	"W",    # warnings
+	"I",    # isort
+	"UP",   # pyupgrade
+	"S",    # bandit
+	"C4",   # flake8-comprehensions
+	"B",    # flake8-bugbear
+	"A001", # flake8-builtins
+	"TC",   # flake8-typecheck
+	"TID",  # flake8-tidy-imports
+	"RUF",  # ruff-specific rules
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*.py" = ["D", "S", "RUF012"]
