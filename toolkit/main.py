@@ -290,8 +290,8 @@ def handle_tools(args, tool_cfg):
     """Dispatch preprocessing tools."""
 
     tools_map = {
-        "split blocks": lambda: split_volume(tool_cfg),
-        "split blocks [hpc]": lambda: split_volume_hpc(tool_cfg),
+        "split volume": lambda: split_volume(tool_cfg),
+        "split volume [hpc]": lambda: split_volume_hpc(tool_cfg),
         "merge blocks": lambda: merge_volume(tool_cfg),
         "merge blocks [hpc]": lambda: merge_volume_hpc(tool_cfg),
         "convert prec": lambda: convert_prec(tool_cfg),
