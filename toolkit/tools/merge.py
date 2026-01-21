@@ -37,7 +37,7 @@ def _merge_volume(
         save_as_tif (bool): Save merged TIFF to disk.
         fill_missing (bool): Fill missing blocks in grid with zeros.
     """
-    pattern = re.compile(r"chunk_z(\d+)_y(\d+)_x(\d+)\.h5")
+    pattern = re.compile(r"chunk_z(\d+)_y(\d+)_x(\d+)[A-Za-z0-9_]*\.h5")
     chunk_files = [f for f in os.listdir(chunk_path) if f.endswith(".h5")]
     coords = []
     for f in chunk_files:
