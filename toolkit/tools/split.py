@@ -97,6 +97,7 @@ def _split_volume(path, save_path='', chunk_size=[512, 512, 512], overlap=[64, 6
                         zs:ze,
                     ]
                     chunk = np.asarray(vol[bbox])
+                    chunk = chunk[:,:,:,0]
                     # (Z,Y,X) ordering
                     # chunk = np.transpose(chunk, (2, 1, 0))
                 else:
