@@ -20,7 +20,6 @@ def _merge_volume(
     save_path,
     chunk_size=[512, 512, 512],
     overlap=[64, 64, 64],
-    ndim=4,
     save_as_tif=True,
     fill_missing=True,
 ):
@@ -33,12 +32,11 @@ def _merge_volume(
         save_path (str): Output path for merged result.
         chunk_size (list[int]): [z, y, x] standard chunk size.
         overlap (list[int]): Overlap size.
-        ndim (int): 3 for (Z,Y,X) or 4 for (C,Z,Y,X).
         save_as_tif (bool): Save merged TIFF to disk.
         fill_missing (bool): Fill missing blocks in grid with zeros.
     """
-    pattern = re.compile(r"chunk_z(\d+)_y(\d+)_x(\d+)[A-Za-z0-9_]*\.h5")
-    chunk_files = [f for f in os.listdir(chunk_path) if f.endswith(".h5")]
+    pattern = re.compile(r"chunk_z(\d+)_y(\d+)_x(\d+)[A-Za-z0-9_]*")
+    chunk_files = [f for f in os.listdir(chunk_path)]
     coords = []
     for f in chunk_files:
         m = pattern.match(f)
@@ -50,10 +48,19 @@ def _merge_volume(
     coords.sort()
 
     # Load one chunk for dtype inference
-    with h5py.File(os.path.join(chunk_path, coords[0][3]), "r") as f:
-        chunk = f["vol0"][:]
-    dtype = chunk.dtype
-    ch = chunk.shape[0] if ndim == 4 else None
+    if chunk_files[0].split('.')[-1] == 'h5':
+        with h5py.File(os.path.join(chunk_path, coords[0][3]), "r") as f:
+            chunk = f["vol0"][:]
+        dtype = chunk.dtype
+        ndim = len(chunk.shape)
+        ch = chunk.shape[0] if ndim == 4 else None
+    elif chunk_files[0].split('.')[-1] in ['tif', 'tiff']:
+        chunk = tiff.imread(os.path.join(chunk_path, coords[0][3]))
+        dtype = chunk.dtype
+        ndim = len(chunk.shape)
+        ch = chunk.shape[0] if ndim == 4 else None
+    else:
+        print(f"[Error] Wrong input format!")
 
     z_blocks = max(c[0] for c in coords) + 1
     y_blocks = max(c[1] for c in coords) + 1
@@ -99,8 +106,14 @@ def _merge_volume(
                     continue
 
                 fname = chunk_dict[(zi, yi, xi)]
-                with h5py.File(os.path.join(chunk_path, fname), "r") as f:
-                    chunk = f["vol0"][:]
+                if fname.split('.')[-1] == 'h5':
+                    with h5py.File(os.path.join(chunk_path, fname), "r") as f:
+                        chunk = f["vol0"][:]
+                elif fname.split('.')[-1] in ['tif', 'tiff']:
+                    chunk = tiff.imread(os.path.join(chunk_path, fname))
+                else:
+                    print(f"[Error] Wrong input format!")
+
                 if ndim == 4:
                     cz, cy, cx = chunk.shape[-3:]
                 else:
