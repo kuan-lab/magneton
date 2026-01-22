@@ -36,7 +36,7 @@ def _merge_volume(
         fill_missing (bool): Fill missing blocks in grid with zeros.
     """
     pattern = re.compile(r"chunk_z(\d+)_y(\d+)_x(\d+)[A-Za-z0-9_]*")
-    chunk_files = [f for f in os.listdir(chunk_path)]
+    chunk_files = [f for f in os.listdir(chunk_path) if f.lower().endswith((".h5", ".tif", ".tiff"))]
     coords = []
     for f in chunk_files:
         m = pattern.match(f)
