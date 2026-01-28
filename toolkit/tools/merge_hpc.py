@@ -59,7 +59,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
 
     global_cfgs = load_global_config_path("magneton/config.yaml")
     cfg_path = (
-        global_cfgs.get("affinity_prediction", {})
+        global_cfgs.get("toolkit", {})
                 .get("merge", "magneton/toolkit/configs/config_merge.yaml")
     )
 
