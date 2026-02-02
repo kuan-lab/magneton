@@ -102,7 +102,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     # cfg_path = global_cfgs.get("instance_segmentation/mian", "magneton/instance_segmentation/configs/config.yaml")
     cfg_path = (
         global_cfgs.get("instance_segmentation", {})
-                .get("mian", "magneton/instance_segmentation/configs/config.yaml")
+                .get("main", "magneton/instance_segmentation/configs/config.yaml")
     )
     lines += [
         "set -e",
