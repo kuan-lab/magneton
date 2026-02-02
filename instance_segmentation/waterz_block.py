@@ -128,6 +128,13 @@ def run_waterz_block(
     aff = aff_block_czyx.astype(np.float32)
     if aff.max() > 1.0:
         aff /= 255.0
+
+    # Handle single-channel affinity (e.g., mito interior probability)
+    # by duplicating to 3 channels for waterz compatibility
+    if aff.shape[0] == 1:
+        print(f"[INFO] Single-channel affinity detected, duplicating to 3 channels for waterz")
+        aff = np.concatenate([aff, aff, aff], axis=0)
+
     aff = np.ascontiguousarray(aff.astype(np.float32))
     # Generate initial watershed
     if sv_type == "3d":
@@ -144,6 +151,7 @@ def run_waterz_block(
         # raise RuntimeError("Watershed produced no segments.")
     supervox, _ = compact_labels_uint32(supervox)
     supervox = np.ascontiguousarray(supervox.astype(np.uint64, copy=False))
+
     # Run waterz aggregation
     outs = []
     for out in agglomerate(
