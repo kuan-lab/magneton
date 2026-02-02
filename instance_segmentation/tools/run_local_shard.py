@@ -40,10 +40,14 @@ def main():
     mask_path   = cfg["mask"]["path"]
     output_local_base = cfg["paths"]["output_local_base"]
 
-    # thresholds = stage_cfg.get("thresholds", [0.4])
     mip = stage_cfg.get("mip", 0)
     local_ckpt_dir = cfg["checkpoint"]["segmentation_dir"]
     metadata_dir   = stage_cfg.get("metadata_dir", "magneton/local_metadata")
+
+    # Mode configuration
+    mode_cfg = cfg.get("mode", {})
+    mode_type = mode_cfg.get("type", "neuron")
+    print(f"[INFO] Segmentation mode: {mode_type}")
 
     # Analyzing indices
     idx_list = [int(x) for x in args.indices.strip().split(",") if x.strip() != ""]
@@ -65,7 +69,8 @@ def main():
                 mask_path=mask_path,
                 output_local_base=output_local_base,
                 mip=mip,
-                stage_cfg=stage_cfg
+                stage_cfg=stage_cfg,
+                mode_cfg=mode_cfg
             )
             futures.append(fut)
 
