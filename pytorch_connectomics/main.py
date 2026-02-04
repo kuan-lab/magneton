@@ -41,10 +41,28 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 # Helper: config file editing (same style)
 # ==========================================================
 
+def _fix_yaml_time(cfg):
+    """Fix YAML sexagesimal conversion: integer seconds back to HH:MM:SS string.
+
+    YAML 1.1 interprets unquoted time-like values (e.g., 10:00:00) as sexagesimal
+    numbers, converting them to integers (e.g., 36000). This function detects
+    such conversions and restores the HH:MM:SS format.
+    """
+    if isinstance(cfg, dict):
+        for key, val in cfg.items():
+            if key == "time" and isinstance(val, int):
+                # Convert seconds to HH:MM:SS format
+                hours, remainder = divmod(val, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                cfg[key] = f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+            elif isinstance(val, dict):
+                _fix_yaml_time(val)
+    return cfg
+
 def is_port_in_use(port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(("localhost", port)) == 0
-    
+
 def edit_stage_config(config_path: str, stage_name: str):
     print(f"\nStage: {stage_name}")
     print(f"Config path: {config_path}")
@@ -53,12 +71,22 @@ def edit_stage_config(config_path: str, stage_name: str):
         print("Config file not found. Skipping modification.")
         return config_path
 
+    # Ask first (original flow - preview only shown if user says "y")
     if not Prompt.ask("[white]> Modify this stage config before running? (y/n)[/white]", default="n").lower().startswith("y"):
+        # Still load, fix, and save to repair any corrupted time values
+        with open(config_path, "r") as f:
+            cfg_data = yaml.safe_load(f)
+        cfg_data = _fix_yaml_time(cfg_data)
+        with open(config_path, "w") as f:
+            yaml.safe_dump(cfg_data, f, sort_keys=False)
         return config_path
 
-    # Read configuration file
+    # Read and fix config BEFORE displaying (so preview shows correct values)
     with open(config_path, "r") as f:
         cfg_data = yaml.safe_load(f)
+
+    # Fix any time values corrupted by YAML sexagesimal conversion
+    cfg_data = _fix_yaml_time(cfg_data)
 
     # Display Configuration Items (Single Layer)
     flat_keys = []
