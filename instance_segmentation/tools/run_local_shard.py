@@ -32,7 +32,7 @@ def main():
     args = ap.parse_args()
 
     cfg = load_config(args.config)
-    stage_cfg = get_stage_config(cfg, "segmentation_stage")
+    stage_cfg = get_stage_config(cfg, "segmentation")
     blocks = _get_blocks(cfg)
 
     input_path  = cfg["paths"]["input"]
