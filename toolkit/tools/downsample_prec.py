@@ -1,5 +1,6 @@
 import sys
 import os
+import re
 import igneous.task_creation as tc
 from taskqueue import TaskQueue
 import argparse
@@ -9,19 +10,69 @@ import time
 import traceback
 
 
-def create_task_queue(queuepath, source_path, mip, num_mips, factor):
+def parse_memory_string(mem_str):
+    """Parse memory string like '32G', '4096M', '4096' to bytes."""
+    if isinstance(mem_str, (int, float)):
+        return int(mem_str)
+
+    mem_str = str(mem_str).strip().upper()
+    match = re.match(r'^(\d+(?:\.\d+)?)\s*([KMGT]?)B?$', mem_str)
+    if not match:
+        return None
+
+    value = float(match.group(1))
+    unit = match.group(2)
+
+    multipliers = {'': 1, 'K': 1024, 'M': 1024**2, 'G': 1024**3, 'T': 1024**4}
+    return int(value * multipliers.get(unit, 1))
+
+
+def calculate_memory_target(num_workers):
+    """
+    Calculate memory_target for igneous based on environment.
+    - SLURM job: (SLURM_MEM_PER_CPU * SLURM_CPUS_PER_TASK / num_workers) * 0.75
+    - Non-SLURM: 5GB default
+    """
+    slurm_job_id = os.environ.get("SLURM_JOB_ID")
+
+    if slurm_job_id:
+        # Running in SLURM - get memory allocation from environment
+        mem_per_cpu_str = os.environ.get("SLURM_MEM_PER_CPU", "4096")  # Default 4GB in MB
+        cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 8))
+
+        # SLURM_MEM_PER_CPU is typically in MB
+        mem_per_cpu = parse_memory_string(mem_per_cpu_str)
+        if mem_per_cpu is None:
+            # Assume MB if no unit
+            mem_per_cpu = int(mem_per_cpu_str) * 1024 * 1024
+
+        total_memory = mem_per_cpu * cpus
+        memory_target = int((total_memory / num_workers) * 0.75)
+        print(f"[INFO] SLURM job detected (ID: {slurm_job_id})")
+        print(f"[INFO] Memory: {mem_per_cpu/1e9:.1f}GB × {cpus} CPUs = {total_memory/1e9:.1f}GB total")
+        print(f"[INFO] Memory target: {total_memory/1e9:.1f}GB / {num_workers} workers × 0.75 = {memory_target/1e9:.1f}GB per task")
+        return memory_target
+    else:
+        print("[INFO] Non-SLURM mode: using 5GB memory target")
+        return 5_000_000_000  # 5GB default for non-HPC
+
+
+def create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target=None):
     bounds = None  # None will use full bounds
     tq = TaskQueue('fq://'+queuepath)
-    # source_path=input('Cloud Path:')
-    tasks = tc.create_downsampling_tasks(
-        source_path,
-        mip=mip,       # Starting mip
-        num_mips=num_mips,  # Final mip to downsample to
-        bounds=bounds,
-        factor=factor,  # Downsample all 3 axes
-        compress=False,
-        fill_missing=True,
-    )
+
+    kwargs = {
+        'mip': mip,
+        'num_mips': num_mips,
+        'bounds': bounds,
+        'factor': factor,
+        'compress': False,
+        'fill_missing': True,
+    }
+    if memory_target is not None:
+        kwargs['memory_target'] = memory_target
+
+    tasks = tc.create_downsampling_tasks(source_path, **kwargs)
     tq.insert(tasks)
     print('Done adding {} tasks to queue at {}'.format(len(tasks), queuepath))
 
@@ -36,7 +87,7 @@ def run_tasks_from_queue(queuepath):
     print('Done')
 
 
-def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=60, file_idle_threshold=60):
+def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=300, file_idle_threshold=60):
     """
     Launch multiple workers and monitor the queue status.
     If the queue remains unchanged for an extended period (even if not emptied), the main process will terminate all workers and exit.
@@ -53,6 +104,14 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=60, file_id
 
     queue_dir = os.path.join(os.path.abspath(queuepath), "queue")
     last_activity = time.time()
+    last_queue_count = None
+
+    def get_queue_count():
+        """Return count of .json files in the queue directory"""
+        try:
+            return len([f for f in os.listdir(queue_dir) if f.endswith(".json")])
+        except FileNotFoundError:
+            return 0
 
     def queue_recently_active():
         """Determine whether queue/ contains any recently modified files"""
@@ -77,13 +136,19 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=60, file_id
             print("[MAIN] All workers have exited on their own.")
             break
 
-        # Check if the queue has any activity
-        if queue_recently_active():
+        current_queue_count = get_queue_count()
+
+        # Check if the queue has any activity (file modifications or count changes)
+        if queue_recently_active() or (last_queue_count is not None and current_queue_count != last_queue_count):
             last_activity = time.time()
+        last_queue_count = current_queue_count
 
         # Queue remains inactive for an extended period → Terminate all workers
         if time.time() - last_activity > idle_exit_seconds:
-            print(f"[MAIN] Queue has been idle for {idle_exit_seconds}s → terminating all workers.")
+            if current_queue_count == 0:
+                print(f"[MAIN] Queue is empty and idle for {idle_exit_seconds}s → terminating all workers.")
+            else:
+                print(f"[MAIN] Queue has {current_queue_count} remaining tasks but no progress for {idle_exit_seconds}s (tasks may be stuck) → terminating workers.")
             for p in alive:
                 if p.is_alive():
                     p.terminate()
@@ -109,12 +174,15 @@ def main():
     num_mips = cfg["downsample"]["num_mips"]
     factor = cfg["downsample"]["factor"]
     num_workers = cfg["downsample"]["num_workers"]
+
     if cfg["downsample"]["flag"]:
-        create_task_queue(queuepath, source_path, mip, num_mips, factor)
+        memory_target = calculate_memory_target(num_workers)
+        create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
         run_multiple_workers(queuepath=queuepath, num_workers=num_workers)
     else:
         print('downsample flag is false.')
-    
+
+
 def downsample_prec(cfg):
     queuepath = cfg["downsample"]["queuepath"]
     source_path = cfg["downsample"]["source_path"]
@@ -122,8 +190,10 @@ def downsample_prec(cfg):
     num_mips = cfg["downsample"]["num_mips"]
     factor = cfg["downsample"]["factor"]
     num_workers = cfg["downsample"]["num_workers"]
+
     if cfg["downsample"]["flag"]:
-        create_task_queue(queuepath, source_path, mip, num_mips, factor)
+        memory_target = calculate_memory_target(num_workers)
+        create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
         run_multiple_workers(queuepath=queuepath, num_workers=num_workers)
     else:
         print('downsample flag is false.')
