@@ -3,7 +3,7 @@ hpc:
   scheduler: slurm
   job_dir: magneton/jobs/pytc
   python_bin: python
-  time: 00:30:00
+  time: "00:30:00"
   gpus: a100:1
   cpus: 12
   mem-per-gpu: 64G
