@@ -67,7 +67,7 @@ class PrecConverter:
         print(f"[INFO] Uploading to CloudVolume at: {self.out_path}")
 
         # --- Upload data --- #
-        if num_channels == 1 and len(full_data.shape) == 3::
+        if num_channels == 1 and len(full_data.shape) == 3:
             full_data = np.transpose(full_data, (2, 1, 0))  # (X,Y,Z)
             assert vol.shape[:3] == full_data.shape
             vol[:, :, :] = full_data
