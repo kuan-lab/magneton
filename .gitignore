@@ -1,2 +1,30 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+
+# Configs (local/experimental)
+config.yaml
+toolkit/configs/
+instance_segmentation/configs/
+pytorch_connectomics/configs/
+
+# SLURM jobs (scripts + logs)
+jobs/
+
+# Temp files
+*.tmp
+
+# Checkpoints and runtime state
+checkpoints/
+
+# Segmentation metadata (block JSONs)
+seg_metadata_*/
+
+# Igneous task state
+igneous_tasks/completions
+igneous_tasks/insertions
+
+# External projects
+marmoset_project/

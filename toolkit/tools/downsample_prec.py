@@ -40,17 +40,20 @@ def calculate_memory_target(num_workers):
         mem_per_cpu_str = os.environ.get("SLURM_MEM_PER_CPU", "4096")  # Default 4GB in MB
         cpus = int(os.environ.get("SLURM_CPUS_PER_TASK", 8))
 
-        # SLURM_MEM_PER_CPU is typically in MB
+        # SLURM_MEM_PER_CPU is always in MB (plain number, no unit suffix)
+        # Append 'M' so parse_memory_string treats it correctly
+        if re.match(r'^\d+$', mem_per_cpu_str):
+            mem_per_cpu_str = mem_per_cpu_str + 'M'
         mem_per_cpu = parse_memory_string(mem_per_cpu_str)
         if mem_per_cpu is None:
-            # Assume MB if no unit
-            mem_per_cpu = int(mem_per_cpu_str) * 1024 * 1024
+            mem_per_cpu = 4 * 1024 * 1024 * 1024  # 4GB fallback
 
         total_memory = mem_per_cpu * cpus
         memory_target = int((total_memory / num_workers) * 0.75)
+        GiB = 1024**3
         print(f"[INFO] SLURM job detected (ID: {slurm_job_id})")
-        print(f"[INFO] Memory: {mem_per_cpu/1e9:.1f}GB × {cpus} CPUs = {total_memory/1e9:.1f}GB total")
-        print(f"[INFO] Memory target: {total_memory/1e9:.1f}GB / {num_workers} workers × 0.75 = {memory_target/1e9:.1f}GB per task")
+        print(f"[INFO] Memory: {mem_per_cpu/GiB:.1f}GB × {cpus} CPUs = {total_memory/GiB:.1f}GB total")
+        print(f"[INFO] Memory target: {total_memory/GiB:.1f}GB / {num_workers} workers × 0.75 = {memory_target/GiB:.1f}GB per task")
         return memory_target
     else:
         print("[INFO] Non-SLURM mode: using 5GB memory target")
