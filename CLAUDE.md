@@ -134,3 +134,41 @@ Fixed SLURM memory detection showing 0.0GB in downsample jobs, and corrected dis
 **Modified: `toolkit/tools/downsample_prec.py`**
 - Bug fix: `SLURM_MEM_PER_CPU` is a plain number in MB but `parse_memory_string` treated it as bytes. Fix: append `'M'` when value has no unit suffix
 - Bug fix: Display divided by `1e9` (decimal GB) instead of `1024**3` (binary GiB), causing 32G to show as 34.4GB. Fixed to use `1024**3`
+
+---
+
+## February 11, 2026
+
+### Summary
+Added comprehensive `.gitignore` and new crop volume tool with HPC support.
+
+### Changes Made
+
+**New File: `.gitignore`**
+- Comprehensive ignore rules covering SLURM logs, auto-generated temp configs, checkpoints, seg metadata, igneous task state, configs, jobs, and build artifacts (previously only had `__pycache__/`)
+
+**New Files: `toolkit/tools/crop.py`, `toolkit/tools/crop_hpc.py`**
+- New crop volume tool with HPC support, registered in `toolkit/main.py` interactive menu and CLI
+
+**Modified: `toolkit/main.py`**
+- Added crop tool imports and registration (CLI args, interactive menu, config path, dispatch)
+- Renamed "split blocks" to "split volume" in tools_map
+- Updated interactive menu indices for new entries
+
+---
+
+## February 12, 2026
+
+### Summary
+Added seed erosion to mito binary watershed to reduce merge errors, and diagnosed/fixed merge split errors caused by `max_voxel_size` threshold filtering out legitimate large-segment matches.
+
+### Changes Made
+
+**Modified: `instance_segmentation/mito_block.py`**
+- Added `erosion_iters` parameter to `binary_watershed()` and `run_mito_block()`: applies `binary_erosion` to seed mask before watershed to break bridges between adjacent objects
+
+**Modified: `instance_segmentation/stages/segmentation_stage.py`**
+- Passed `erosion_iters` from mito config to `run_mito_block()` in both serial and parallel paths
+
+**Modified: `instance_segmentation/configs/config.yaml`**
+- Changed `max_voxel_size` from `1500000` to `100000000` (100M) — old threshold was calibrated for lower-resolution data and filtered out legitimate large-segment matches at 4nm resolution

@@ -95,7 +95,8 @@ def segmentation_blocks(global_cfg, stage_cfg, restart=False):
                 foreground_threshold=mito_cfg.get("foreground_threshold", 0.85),
                 min_segment_size=mito_cfg.get("min_segment_size", 128),
                 seed_min_size=mito_cfg.get("seed_min_size", 32),
-                remove_small_mode=mito_cfg.get("remove_small_mode", "background")
+                remove_small_mode=mito_cfg.get("remove_small_mode", "background"),
+                erosion_iters=mito_cfg.get("erosion_iters", 0)
             )
         else:  # neuron mode (waterz)
             seg_local = run_waterz_block(aff, mask=mask,
@@ -187,7 +188,8 @@ def _process_block(
             foreground_threshold=mito_cfg.get("foreground_threshold", 0.85),
             min_segment_size=mito_cfg.get("min_segment_size", 128),
             seed_min_size=mito_cfg.get("seed_min_size", 32),
-            remove_small_mode=mito_cfg.get("remove_small_mode", "background")
+            remove_small_mode=mito_cfg.get("remove_small_mode", "background"),
+            erosion_iters=mito_cfg.get("erosion_iters", 0)
         )
     else:  # neuron mode (waterz)
         seg_local = run_waterz_block(aff, mask=mask, seg_thresholds=thresholds, aff_thresholds=aff_thresholds,

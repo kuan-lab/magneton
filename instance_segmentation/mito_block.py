@@ -11,7 +11,7 @@ Unlike waterz (designed for dense neuron segmentation), this approach:
 """
 
 import numpy as np
-from scipy.ndimage import label as scipy_label
+from scipy.ndimage import label as scipy_label, binary_erosion
 from skimage.segmentation import watershed
 from skimage.morphology import remove_small_objects
 from skimage.measure import label
@@ -51,7 +51,8 @@ def binary_watershed(
     thres2=0.85,
     thres_small=128,
     seed_thres=32,
-    remove_small_mode='background'
+    remove_small_mode='background',
+    erosion_iters=0
 ):
     """
     Convert binary foreground probability maps to instance masks via
@@ -68,6 +69,8 @@ def binary_watershed(
         thres_small: Size threshold for small objects to remove. Default: 128
         seed_thres: Size threshold for small seeds to remove. Default: 32
         remove_small_mode: 'background', 'neighbor', or 'none'. Default: 'background'
+        erosion_iters: Number of binary erosion iterations on seed mask. Helps
+            break bridges between adjacent objects to reduce merge errors. Default: 0 (no erosion)
 
     Returns:
         Segmentation array of shape (Z, Y, X) with instance labels.
@@ -84,6 +87,10 @@ def binary_watershed(
 
     # Create seed map from high-confidence regions
     seed_map = semantic > int(255 * thres1)
+
+    # Erode seed map to break bridges between adjacent objects
+    if erosion_iters > 0:
+        seed_map = binary_erosion(seed_map, iterations=erosion_iters)
 
     # Create foreground mask from moderate-confidence regions
     foreground = semantic > int(255 * thres2)
@@ -112,7 +119,8 @@ def run_mito_block(
     foreground_threshold=0.85,
     min_segment_size=128,
     seed_min_size=32,
-    remove_small_mode='background'
+    remove_small_mode='background',
+    erosion_iters=0
 ):
     """
     Run mitochondria segmentation on a single block using binary watershed.
@@ -129,6 +137,7 @@ def run_mito_block(
         min_segment_size: Remove segments smaller than this (default: 128)
         seed_min_size: Remove seed regions smaller than this (default: 32)
         remove_small_mode: How to handle small segments (default: 'background')
+        erosion_iters: Number of erosion iterations on seed mask to break merges (default: 0)
 
     Returns:
         Segmentation array of shape (Z, Y, X) with instance labels (uint32).
@@ -155,7 +164,8 @@ def run_mito_block(
         thres2=foreground_threshold,
         thres_small=min_segment_size,
         seed_thres=seed_min_size,
-        remove_small_mode=remove_small_mode
+        remove_small_mode=remove_small_mode,
+        erosion_iters=erosion_iters
     )
 
     # Ensure output is uint32 for compatibility with rest of pipeline
