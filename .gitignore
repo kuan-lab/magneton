@@ -26,5 +26,12 @@ seg_metadata_*/
 igneous_tasks/completions
 igneous_tasks/insertions
 
+# WebKnossos upload scripts and output
+batch_crop_wk.py
+out/
+
+# SLURM monitoring
+monitor_slurm.py
+
 # External projects
 marmoset_project/
