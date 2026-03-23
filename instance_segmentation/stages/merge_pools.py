@@ -168,7 +168,8 @@ def build_id_pools_parallel(global_cfg, stage_cfg, restart=False):
     if restart and os.path.exists(unions_path):
         os.remove(unions_path)
 
-    workers = int(stage_cfg.get("workers", os.cpu_count() or 1))
+    workers = int(stage_cfg.get("workers",
+        os.environ.get("SLURM_CPUS_PER_TASK", os.cpu_count() or 1)))
     print(f"[INFO] Overlap pairs: {len(pairs)}; dispatch with {workers} workers.")
 
     # Create an ndex->path mapping
