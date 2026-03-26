@@ -4,7 +4,6 @@ import json
 import gc
 import numpy as np
 from concurrent.futures import ProcessPoolExecutor, as_completed
-from multiprocessing import Manager
 from tqdm import tqdm
 from cloudvolume import CloudVolume
 import argparse
@@ -16,7 +15,9 @@ from magneton.instance_segmentation.config import (
 )
 
 from magneton.instance_segmentation.utils.meta_utils import load_index_meta
-from magneton.instance_segmentation.utils.block_utils import compute_core_region
+from magneton.instance_segmentation.utils.block_utils import (
+    compute_core_region, compute_chunk_set, color_blocks
+)
 from magneton.instance_segmentation.utils.relabel_utils import (
     update_id_pools, build_rep_map_from_pools, relabel_array_inplace_with_map
 )
@@ -46,9 +47,10 @@ def _load_unions(merge_ckpt_dir):
     return pairs
 
 
-def _apply_block(block_meta, offsets, rep_map, output_path, core_bounds, lock):
+def _apply_block(block_meta, offsets, rep_map, output_path, core_bounds):
     """
     Worker function: read one block, apply offset + rep_map, trim to core, write.
+    No lock needed — caller ensures no two concurrent blocks share chunk files.
     """
     i = block_meta["index"]
     z1, z2, y1, y2, x1, x2 = block_meta["coords"]
@@ -73,12 +75,11 @@ def _apply_block(block_meta, offsets, rep_map, output_path, core_bounds, lock):
     # Trim to core region (slice in block-local coordinates)
     core_local = seg_zyx[cz1 - z1:cz2 - z1, cy1 - y1:cy2 - y1, cx1 - x1:cx2 - x1]
 
-    # Write core to output volume (serialize to prevent chunk-file races)
+    # Write core to output volume (no lock — graph coloring guarantees no chunk conflicts)
     out_xyz = np.transpose(core_local, (2, 1, 0))[:, :, :, np.newaxis]
     out_vol = CloudVolume(output_path, mip=0, bounded=False, progress=False,
-                          non_aligned_writes=True, fill_missing=True)
-    with lock:
-        out_vol[cx1:cx2, cy1:cy2, cz1:cz2] = out_xyz
+                          non_aligned_writes=True, fill_missing=True, compress=False)
+    out_vol[cx1:cx2, cy1:cy2, cz1:cz2] = out_xyz
 
     del seg_zyx, core_local, out_xyz
     gc.collect()
@@ -142,36 +143,59 @@ def apply_pools_to_global(global_cfg, stage_cfg):
                           progress=False, non_aligned_writes=True)
     out_vol.commit_info(); out_vol.commit_provenance()
 
-    # Compute core regions for all blocks
+    # Chunk size for chunk-aligned core snapping and graph coloring
+    chunk_size_xyz = tuple(aff_vol.chunk_size)
+    chunk_size_zyx = (chunk_size_xyz[2], chunk_size_xyz[1], chunk_size_xyz[0])
+
+    # Compute core regions for all blocks (snapped to chunk boundaries)
     core_bounds = {}
     for blk in blocks_meta:
         core_bounds[blk["index"]] = compute_core_region(
-            tuple(blk["coords"]), overlap_zyx, vol_shape_zyx
+            tuple(blk["coords"]), overlap_zyx, vol_shape_zyx, chunk_size_zyx
         )
 
-    print(f"[INFO] Starting parallel apply with {workers} workers, "
-          f"overlap={overlap_zyx}, core trimming enabled")
+    # Graph-color blocks by chunk conflict so each color group can write
+    # fully in parallel with no locking
 
-    # Parallel block processing
-    manager = Manager()
-    lock = manager.Lock()
+    chunk_sets = {blk["index"]: compute_chunk_set(core_bounds[blk["index"]], chunk_size_zyx)
+                  for blk in blocks_meta}
+    block_indices = [blk["index"] for blk in blocks_meta]
+    color_groups = color_blocks(block_indices, chunk_sets)
+    num_colors = len(color_groups)
 
-    with ProcessPoolExecutor(max_workers=workers) as ex:
-        futures = {}
-        for blk in blocks_meta:
-            fut = ex.submit(
-                _apply_block,
-                blk, offsets, rep_map, output_path,
-                core_bounds[blk["index"]], lock
-            )
-            futures[fut] = blk["index"]
+    print(f"[INFO] Graph coloring: {num_colors} colors for {len(blocks_meta)} blocks "
+          f"(chunk_size_zyx={chunk_size_zyx}, overlap={overlap_zyx})")
+    for c in sorted(color_groups):
+        print(f"  Color {c}: {len(color_groups[c])} blocks")
 
-        for fut in tqdm(as_completed(futures), total=len(futures),
-                        desc="Apply Pools (parallel)"):
-            try:
-                block_idx = fut.result()
-            except Exception as e:
-                print(f"[WARN] Block {futures[fut]} failed: {e}")
+    # Build index lookup for block metadata
+    blk_by_idx = {blk["index"]: blk for blk in blocks_meta}
+
+    # Process one color at a time — all blocks in a color write to disjoint
+    # chunks so no lock is needed within a color group
+    done = 0
+    with tqdm(total=len(blocks_meta), desc="Apply Pools (colored)") as pbar:
+        for c in sorted(color_groups):
+            group = color_groups[c]
+            with ProcessPoolExecutor(max_workers=workers) as ex:
+                futures = {}
+                for bi in group:
+                    fut = ex.submit(
+                        _apply_block,
+                        blk_by_idx[bi], offsets, rep_map, output_path,
+                        core_bounds[bi]
+                    )
+                    futures[fut] = bi
+
+                for fut in as_completed(futures):
+                    try:
+                        fut.result()
+                        done += 1
+                        pbar.update(1)
+                    except Exception as e:
+                        done += 1
+                        pbar.update(1)
+                        print(f"[WARN] Block {futures[fut]} failed: {e}")
 
     # Optional: export preview
     if export_tif_enabled:

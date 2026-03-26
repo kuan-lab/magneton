@@ -2,7 +2,7 @@
 """
 utils: Utility Module Collection
 """
-from .block_utils import generate_blocks_zyx, intersect_boxes_zyx
+from .block_utils import generate_blocks_zyx, intersect_boxes_zyx, compute_chunk_set, color_blocks
 from .io_utils import export_tif_from_volume
 from .meta_utils import (
     load_index_meta, build_index, save_block_meta, block_meta_path, index_meta_path
@@ -17,6 +17,8 @@ from .interrupts import InterruptController
 __all__ = [
     "generate_blocks_zyx",
     "intersect_boxes_zyx",
+    "compute_chunk_set",
+    "color_blocks",
     "export_tif_from_volume",
     "load_index_meta",
     "build_index",

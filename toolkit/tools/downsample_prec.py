@@ -77,7 +77,10 @@ def create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_targ
 
     tasks = tc.create_downsampling_tasks(source_path, **kwargs)
     tq.insert(tasks)
-    print('Done adding {} tasks to queue at {}'.format(len(tasks), queuepath))
+    tq.rezero()
+    total = len(tasks)
+    print('Done adding {} tasks to queue at {}'.format(total, queuepath))
+    return total
 
 def run_tasks_from_queue(queuepath):
     tq = TaskQueue('fq://'+queuepath)
@@ -90,7 +93,7 @@ def run_tasks_from_queue(queuepath):
     print('Done')
 
 
-def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=300, file_idle_threshold=60):
+def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=120, file_idle_threshold=60, total_tasks=None):
     """
     Launch multiple workers and monitor the queue status.
     If the queue remains unchanged for an extended period (even if not emptied), the main process will terminate all workers and exit.
@@ -106,6 +109,7 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=300, file_i
         time.sleep(0.5)  # small stagger
 
     queue_dir = os.path.join(os.path.abspath(queuepath), "queue")
+    tq = TaskQueue('fq://' + queuepath)
     last_activity = time.time()
     last_queue_count = None
 
@@ -140,6 +144,15 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=300, file_i
             break
 
         current_queue_count = get_queue_count()
+        completed = tq.completed
+
+        # All tasks completed → exit immediately
+        if total_tasks is not None and completed >= total_tasks:
+            print(f"[MAIN] All {completed}/{total_tasks} tasks completed.")
+            for p in alive:
+                if p.is_alive():
+                    p.terminate()
+            break
 
         # Check if the queue has any activity (file modifications or count changes)
         if queue_recently_active() or (last_queue_count is not None and current_queue_count != last_queue_count):
@@ -148,10 +161,8 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=300, file_i
 
         # Queue remains inactive for an extended period → Terminate all workers
         if time.time() - last_activity > idle_exit_seconds:
-            if current_queue_count == 0:
-                print(f"[MAIN] Queue is empty and idle for {idle_exit_seconds}s → terminating all workers.")
-            else:
-                print(f"[MAIN] Queue has {current_queue_count} remaining tasks but no progress for {idle_exit_seconds}s (tasks may be stuck) → terminating workers.")
+            print(f"[MAIN] {completed}/{total_tasks or '?'} tasks completed, "
+                  f"{current_queue_count} in queue, no progress for {idle_exit_seconds}s → terminating workers.")
             for p in alive:
                 if p.is_alive():
                     p.terminate()
@@ -171,8 +182,9 @@ def main():
     args = parser.parse_args()
 
     cfg = load_config(args.config)
-    queuepath = cfg["downsample"]["queuepath"]
+    queuepath_base = cfg["downsample"]["queuepath"]
     source_path = cfg["downsample"]["source_path"]
+    queuepath = os.path.join(queuepath_base, os.path.basename(source_path.rstrip("/")))
     mip = cfg["downsample"]["mip"]
     num_mips = cfg["downsample"]["num_mips"]
     factor = cfg["downsample"]["factor"]
@@ -180,15 +192,16 @@ def main():
 
     if cfg["downsample"]["flag"]:
         memory_target = calculate_memory_target(num_workers)
-        create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
-        run_multiple_workers(queuepath=queuepath, num_workers=num_workers)
+        total_tasks = create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
+        run_multiple_workers(queuepath=queuepath, num_workers=num_workers, total_tasks=total_tasks)
     else:
         print('downsample flag is false.')
 
 
 def downsample_prec(cfg):
-    queuepath = cfg["downsample"]["queuepath"]
+    queuepath_base = cfg["downsample"]["queuepath"]
     source_path = cfg["downsample"]["source_path"]
+    queuepath = os.path.join(queuepath_base, os.path.basename(source_path.rstrip("/")))
     mip = cfg["downsample"]["mip"]
     num_mips = cfg["downsample"]["num_mips"]
     factor = cfg["downsample"]["factor"]
@@ -196,8 +209,8 @@ def downsample_prec(cfg):
 
     if cfg["downsample"]["flag"]:
         memory_target = calculate_memory_target(num_workers)
-        create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
-        run_multiple_workers(queuepath=queuepath, num_workers=num_workers)
+        total_tasks = create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
+        run_multiple_workers(queuepath=queuepath, num_workers=num_workers, total_tasks=total_tasks)
     else:
         print('downsample flag is false.')
 

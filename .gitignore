@@ -23,8 +23,7 @@ checkpoints/
 seg_metadata_*/
 
 # Igneous task state
-igneous_tasks/completions
-igneous_tasks/insertions
+igneous_tasks/
 
 # WebKnossos upload scripts and output
 batch_crop_wk.py
