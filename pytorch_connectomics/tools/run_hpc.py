@@ -17,9 +17,9 @@ def _ensure_dir(p: str):
     Path(p).mkdir(parents=True, exist_ok=True)
 
 
-def _gen_chunk_configs(config_base, configs_save_path, input_floder):
+def _gen_chunk_configs(config_base, configs_save_path, input_folder):
     configs_to_run = []
-    for fname in os.listdir(input_floder):
+    for fname in os.listdir(input_folder):
         # fpath = os.path.join(folder, fname)
         configs_to_run.append({
             "INFERENCE": {
@@ -27,7 +27,7 @@ def _gen_chunk_configs(config_base, configs_save_path, input_floder):
                 "OUTPUT_NAME": f"{fname.split('.')[0]}.h5"
             },
             "DATASET": {
-                "INPUT_PATH": f"{input_floder}",
+                "INPUT_PATH": f"{input_folder}",
             }
         })
 
@@ -85,11 +85,11 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     if mutil_jobs_flag and cfg.stage in ["inference-hpc",]:
         mutil_jobs_configs = hpc.get("mutil_jobs_configs", {})
         configs_save_path = mutil_jobs_configs.get("configs_save_path", '')
-        input_floder = mutil_jobs_configs.get("input_floder", '')
+        input_folder = mutil_jobs_configs.get("input_folder", '')
         _ensure_dir(configs_save_path)
-        jobs_num = len(os.listdir(input_floder))
+        jobs_num = len(os.listdir(input_folder))
         batch_num = mutil_jobs_configs.get("batch_num", 1)
-        _gen_chunk_configs(cfg_base_path, configs_save_path, input_floder)
+        _gen_chunk_configs(cfg_base_path, configs_save_path, input_folder)
         lines = [
             "#!/bin/bash",
             f"#SBATCH --job-name=pytc",

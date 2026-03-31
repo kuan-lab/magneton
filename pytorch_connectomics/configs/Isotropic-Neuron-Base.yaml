@@ -39,7 +39,7 @@ MODEL:
 DATASET:
   IMAGE_NAME: /gpfs/radev/home/yf354/marmoset_data/neuron_train_images.txt
   LABEL_NAME: /gpfs/radev/home/yf354/marmoset_data/neuron_train_labels.txt
-  INPUT_PATH: /
+  INPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/wk_crops/neuron/fennel/neuron_fennel_x248_y712_z128/
   OUTPUT_PATH: outputs/Marmoset/neuron/isotropic_v1
   IS_ISOTROPIC: true
   PAD_SIZE:
@@ -68,9 +68,9 @@ INFERENCE:
   - 128
   OUTPUT_ACT:
   - sigmoid
-  IMAGE_NAME: fib_f_split_em_big_chunks/fib_f_neuron_test.tif
-  OUTPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_f_neuron_test
-  OUTPUT_NAME: fib_f_neuron_test.h5
+  IMAGE_NAME: neuron_fennel_x248_y712_z128_em.tif
+  OUTPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/wk_crops/neuron/fennel/neuron_fennel_x248_y712_z128/
+  OUTPUT_NAME: neuron_fennel_x248_y712_z128.h5
   PAD_SIZE:
   - 32
   - 32

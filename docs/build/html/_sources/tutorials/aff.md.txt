@@ -60,7 +60,7 @@ Input ```6``` and ```Enter```, using ***HPC resources*** to pre train a model. T
 
 However, for HPC configuration files, this ```mutil_jobs``` switch must be enabled and the ```mutil_jobs_configs``` must be correct.
 - ```configs_save_path```: subprofile storage location
-- ```input_floder```: the path of blocks
+- ```input_folder```: the path of blocks
 - ```batch_num```: the number of blocks in parallel at once
 
 
