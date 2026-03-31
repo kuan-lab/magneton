@@ -1,0 +1,7 @@
+MODEL:
+  ARCHITECTURE: unet_3d
+  BLOCK_TYPE: residual_se
+DATASET:
+  OUTPUT_PATH: outputs/Marmoset/neuron/isotropic
+INFERENCE:
+  OUTPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_f_neuron_test

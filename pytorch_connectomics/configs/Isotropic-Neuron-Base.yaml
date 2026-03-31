@@ -1,0 +1,84 @@
+SYSTEM:
+  NUM_GPUS: 1
+  NUM_CPUS: 8
+AUGMENTOR:
+  SMOOTH: false
+MODEL:
+  INPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  OUTPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  IN_PLANES: 1
+  OUT_PLANES: 3
+  TARGET_OPT:
+  - '2'
+  LABEL_EROSION: None
+  LOSS_OPTION:
+  - - WeightedBCEWithLogitsLoss
+    - DiceLoss
+  LOSS_WEIGHT:
+  - - 1.0
+    - 0.5
+  WEIGHT_OPT:
+  - - '1'
+    - '0'
+  OUTPUT_ACT:
+  - - none
+    - sigmoid
+  FILTERS:
+  - 32
+  - 64
+  - 96
+  - 128
+  - 160
+  NORM_MODE: gn
+DATASET:
+  IMAGE_NAME: /gpfs/radev/home/yf354/marmoset_data/neuron_train_images.txt
+  LABEL_NAME: /gpfs/radev/home/yf354/marmoset_data/neuron_train_labels.txt
+  INPUT_PATH: /
+  OUTPUT_PATH: outputs/Marmoset/neuron/isotropic_v1
+  IS_ISOTROPIC: true
+  PAD_SIZE:
+  - 32
+  - 32
+  - 32
+SOLVER:
+  LR_SCHEDULER_NAME: WarmupCosineLR
+  BASE_LR: 0.02
+  ITERATION_STEP: 1
+  ITERATION_SAVE: 5000
+  ITERATION_TOTAL: 500000
+  SAMPLES_PER_BATCH: 2
+MONITOR:
+  ITERATION_NUM:
+  - 200
+  - 1000
+INFERENCE:
+  INPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  OUTPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  OUTPUT_ACT:
+  - sigmoid
+  IMAGE_NAME: fib_f_split_em_big_chunks/fib_f_neuron_test.tif
+  OUTPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_f_neuron_test
+  OUTPUT_NAME: fib_f_neuron_test.h5
+  PAD_SIZE:
+  - 32
+  - 32
+  - 32
+  AUG_MODE: min
+  AUG_NUM: None
+  STRIDE:
+  - 64
+  - 64
+  - 64
+  SAMPLES_PER_BATCH: 16
