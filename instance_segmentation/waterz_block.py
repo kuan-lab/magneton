@@ -1,3 +1,4 @@
+import time
 import numpy as np
 from scipy.ndimage import distance_transform_edt, watershed_ift
 from skimage.feature import peak_local_max
@@ -20,12 +21,15 @@ def compact_labels_uint32(labels):
     Compress label IDs into a continuous range [0..N]
     """
     lab = np.asarray(labels)
-    ids = np.unique(lab)
-    if ids.size == 0 or (ids.size == 1 and ids[0] == 0):
+    max_id = int(lab.max())
+    if max_id == 0:
         return lab.astype(np.uint32, copy=False), np.arange(1, dtype=np.uint32)
-    if ids[0] != 0:
-        ids = np.insert(ids, 0, 0)
-    lut = np.zeros(int(ids.max()) + 1, dtype=np.uint32)
+    # O(n) flag scan instead of O(n log n) np.unique sort
+    present = np.zeros(max_id + 1, dtype=np.bool_)
+    present[0] = True
+    present[lab.ravel()] = True
+    ids = np.where(present)[0]
+    lut = np.zeros(max_id + 1, dtype=np.uint32)
     lut[ids] = np.arange(ids.size, dtype=np.uint32)
     comp = lut[lab].astype(np.uint32, copy=False)
     return np.ascontiguousarray(comp), lut
@@ -42,8 +46,8 @@ def seeds_3d_from_B(B, interior_thr=0.4, min_distance=15):
     D = distance_transform_edt(mask)
     coords = peak_local_max(D, min_distance=min_distance, labels=mask, exclude_border=False)
     markers = np.zeros(B.shape, np.int32)
-    for i, (z, y, x) in enumerate(coords, 1):
-        markers[z, y, x] = i
+    if len(coords) > 0:
+        markers[coords[:, 0], coords[:, 1], coords[:, 2]] = np.arange(1, len(coords) + 1)
     if markers.max() == 0 and np.any(mask):
         zmax = int(np.argmax(D.reshape(D.shape[0], -1).max(axis=1)))
         zy, zx = np.unravel_index(int(D[zmax].argmax()), D[zmax].shape)
@@ -125,6 +129,7 @@ def run_waterz_block(
     Perform waterz partitioning within a block
     aff_block_czyx: (c,z,y,x)
     """
+    t_total = time.time()
     aff = aff_block_czyx.astype(np.float32)
     if aff.max() > 1.0:
         aff /= 255.0
@@ -136,23 +141,44 @@ def run_waterz_block(
         aff = np.concatenate([aff, aff, aff], axis=0)
 
     aff = np.ascontiguousarray(aff.astype(np.float32))
+    vol_voxels = aff.shape[1] * aff.shape[2] * aff.shape[3]
+    print(f"[TIMER] Block shape (c,z,y,x): {aff.shape}, voxels: {vol_voxels:,}")
+
     # Generate initial watershed
     if sv_type == "3d":
+        t0 = time.time()
         B = boundary_from_aff(aff)
+        t1 = time.time()
+        print(f"[TIMER] boundary_from_aff: {t1 - t0:.2f}s")
+
         markers, _ = seeds_3d_from_B(B, interior_thr=interior_thr, min_distance=min_distance)
+        t2 = time.time()
+        print(f"[TIMER] seeds_3d_from_B (EDT + peak_local_max): {t2 - t1:.2f}s, num_seeds: {markers.max()}")
+
         supervox = watershed(B, markers=markers, mask=mask).astype(np.int32, copy=False)
+        t3 = time.time()
+        print(f"[TIMER] watershed_3d: {t3 - t2:.2f}s")
     elif sv_type == "2d":
+        t0 = time.time()
         supervox = watershed_2d(aff, sv_2d) # sv_2d: grid, minima and maxima_distance
+        t3 = time.time()
+        print(f"[TIMER] watershed_2d: {t3 - t0:.2f}s")
     else:
         raise RuntimeError("Supervoxle should be 3d or 2d.")
     if supervox.max() == 0:
         print("Watershed produced no segments.")
         return np.zeros_like(B, dtype=np.uint32)
         # raise RuntimeError("Watershed produced no segments.")
+
+    t4 = time.time()
     supervox, _ = compact_labels_uint32(supervox)
     supervox = np.ascontiguousarray(supervox.astype(np.uint64, copy=False))
+    t5 = time.time()
+    num_supervox = int(supervox.max())
+    print(f"[TIMER] compact_labels: {t5 - t4:.2f}s, num_supervoxels: {num_supervox}")
 
     # Run waterz aggregation
+    t6 = time.time()
     outs = []
     for out in agglomerate(
         aff,
@@ -166,6 +192,10 @@ def run_waterz_block(
     ):
         out = np.ascontiguousarray(out)
         outs.append(out.copy())
+    t7 = time.time()
+    print(f"[TIMER] waterz_agglomerate: {t7 - t6:.2f}s")
 
     seg = outs[0] if isinstance(outs, list) else next(outs)
+    t_end = time.time()
+    print(f"[TIMER] TOTAL run_waterz_block: {t_end - t_total:.2f}s")
     return seg.astype(np.uint32, copy=False)
