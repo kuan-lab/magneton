@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import math
 import h5py
 import yaml
 import argparse
@@ -17,34 +18,52 @@ def _ensure_dir(p: str):
     Path(p).mkdir(parents=True, exist_ok=True)
 
 
-def _gen_chunk_configs(config_base, configs_save_path, input_folder):
-    configs_to_run = []
-    for fname in os.listdir(input_folder):
-        # fpath = os.path.join(folder, fname)
-        configs_to_run.append({
-            "INFERENCE": {
-                "IMAGE_NAME": f"{fname}",  
-                "OUTPUT_NAME": f"{fname.split('.')[0]}.h5"
-            },
+def _gen_chunk_configs(config_base, configs_save_path, input_folder, chunks_per_task=1):
+    files = sorted(os.listdir(input_folder))
+    num_batches = math.ceil(len(files) / chunks_per_task) if files else 0
+
+    def update_dict(d, u):
+        for k, v in u.items():
+            if isinstance(v, dict):
+                d[k] = update_dict(d.get(k, {}), v)
+            else:
+                d[k] = v
+        return d
+
+    for i in range(num_batches):
+        batch = files[i * chunks_per_task : (i + 1) * chunks_per_task]
+        image_names = list(batch)
+
+        if chunks_per_task == 1:
+            # Scalar values preserve the original single-chunk behavior and
+            # the OUTPUT_NAME type (string) expected by YACS defaults.
+            inference_fields = {
+                "IMAGE_NAME": image_names[0],
+                "OUTPUT_NAME": os.path.splitext(image_names[0])[0] + '.h5',
+            }
+        else:
+            # Multi-chunk: only IMAGE_NAME is a list. YACS rejects list for
+            # OUTPUT_NAME because its default is a string, so run.py derives
+            # output names from image names at runtime.
+            inference_fields = {
+                "IMAGE_NAME": image_names,
+            }
+
+        new_params = {
+            "INFERENCE": inference_fields,
             "DATASET": {
                 "INPUT_PATH": f"{input_folder}",
-            }
-        })
+            },
+        }
 
-    for i, new_params in enumerate(configs_to_run):
         with open(config_base) as f:
             config_data = yaml.safe_load(f)
-        def update_dict(d, u):
-            for k, v in u.items():
-                if isinstance(v, dict):
-                    d[k] = update_dict(d.get(k, {}), v)
-                else:
-                    d[k] = v
-            return d
         update_dict(config_data, new_params)
         new_config_path = f"{configs_save_path}/temp_config_{i}.yaml"
         with open(new_config_path, "w") as f:
             yaml.safe_dump(config_data, f)
+
+    return num_batches
 
 
 def _slurm_script(cfg, stage_cfg, job_dir, array_len):
@@ -54,6 +73,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     mem = hpc.get("mem-per-gpu", "16G")
     cpus = hpc.get("cpus", "8")
     gpus = hpc.get("gpus", "a40:1")
+    constraint = hpc.get("constraint", None)
     partition = hpc.get("partition", None)
     # account = hpc.get("account", None)
     # qos = hpc.get("qos", None)
@@ -87,9 +107,15 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         configs_save_path = mutil_jobs_configs.get("configs_save_path", '')
         input_folder = mutil_jobs_configs.get("input_folder", '')
         _ensure_dir(configs_save_path)
-        jobs_num = len(os.listdir(input_folder))
         batch_num = mutil_jobs_configs.get("batch_num", 1)
-        _gen_chunk_configs(cfg_base_path, configs_save_path, input_folder)
+        chunks_per_task = mutil_jobs_configs.get("chunks_per_task", 1)
+        num_batches = _gen_chunk_configs(
+            cfg_base_path, configs_save_path, input_folder, chunks_per_task
+        )
+        print(
+            f"[INFO] mutil_jobs: {len(os.listdir(input_folder))} chunks "
+            f"-> {num_batches} SLURM tasks (chunks_per_task={chunks_per_task})"
+        )
         lines = [
             "#!/bin/bash",
             f"#SBATCH --job-name=pytc",
@@ -98,7 +124,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
             f"#SBATCH --cpus-per-task={cpus}",
             f"#SBATCH --mem-per-gpu={mem}",
             f"#SBATCH --gpus={gpus}",
-            f"#SBATCH --array=0-{jobs_num-1}%{batch_num}",
+            f"#SBATCH --array=0-{num_batches-1}%{batch_num}",
             f"#SBATCH --output={log_dir}/%x_%A_%a.out",
             f"#SBATCH --error={log_dir}/%x_%A_%a.err",
         ]
@@ -118,6 +144,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
             f"#SBATCH --error={log_dir}/%x_%A_%a.err",
         ]
     if partition:   lines.append(f"#SBATCH --partition={partition}")
+    if constraint: lines.append(f'#SBATCH --constraint="{constraint}"')
 
     # module load
     for m in extra_modules:
