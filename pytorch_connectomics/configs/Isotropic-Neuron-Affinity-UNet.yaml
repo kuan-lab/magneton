@@ -1,7 +1,0 @@
-MODEL:
-  ARCHITECTURE: unet_3d
-  BLOCK_TYPE: residual_se
-DATASET:
-  OUTPUT_PATH: outputs/Marmoset/neuron/isotropic
-INFERENCE:
-  OUTPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/wk_crops/neuron/fennel/neuron_fennel_x248_y712_z128/

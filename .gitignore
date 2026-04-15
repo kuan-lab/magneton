@@ -9,8 +9,6 @@ config.yaml
 toolkit/configs/
 instance_segmentation/configs/
 pytorch_connectomics/configs/*
-!pytorch_connectomics/configs/Isotropic-Neuron-Base.yaml
-!pytorch_connectomics/configs/Isotropic-Neuron-Affinity-UNet.yaml
 
 # SLURM jobs (scripts + logs)
 jobs/
@@ -29,6 +27,7 @@ igneous_tasks/
 
 # WebKnossos upload scripts and output
 batch_crop_wk.py
+upload_webknossos.py
 out/
 
 # SLURM monitoring
