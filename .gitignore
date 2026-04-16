@@ -28,6 +28,7 @@ igneous_tasks/
 # WebKnossos upload scripts and output
 batch_crop_wk.py
 upload_webknossos.py
+crop_myelin_gt.py
 out/
 
 # SLURM monitoring

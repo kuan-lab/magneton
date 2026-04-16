@@ -63,6 +63,8 @@ from magneton.toolkit.tools.resize_tif import resize_tif
 from magneton.toolkit.tools.resize_tif_hpc import resize_tif_hpc
 from magneton.toolkit.tools.crop import crop_volume
 from magneton.toolkit.tools.crop_hpc import crop_volume_hpc
+from magneton.toolkit.tools.mesh_prec import mesh_prec
+from magneton.toolkit.tools.mesh_prec_hpc import mesh_prec_hpc
 
 from magneton.toolkit.utils.interrupts import InterruptController
 
@@ -235,6 +237,10 @@ def run(args, global_cfg):
         global_cfg.get("toolkit", {})
         .get("crop", "magneton/toolkit/configs/config_crop.yaml")
     )
+    mesh_cfg_path = (
+        global_cfg.get("toolkit", {})
+        .get("mesh", "magneton/toolkit/configs/config_mesh.yaml")
+    )
 
     def confirm_stage(stage_name):
         print(f"\nStarting stage: {stage_name}")
@@ -271,6 +277,8 @@ def run(args, global_cfg):
             "resize tif [hpc]": resize_tif_cfg_path,
             "crop volume": crop_cfg_path,
             "crop volume [hpc]": crop_cfg_path,
+            "mesh prec": mesh_cfg_path,
+            "mesh prec [hpc]": mesh_cfg_path,
         }
         tool_cfg_path = tool_map.get(args.tools.lower(), prec_cfg_path)
         # print(args.tools)
@@ -316,6 +324,8 @@ def handle_tools(args, tool_cfg):
         "resize tif [hpc]": lambda: resize_tif_hpc(tool_cfg),
         "crop volume": lambda: crop_volume(tool_cfg),
         "crop volume [hpc]": lambda: crop_volume_hpc(tool_cfg),
+        "mesh prec": lambda: mesh_prec(tool_cfg),
+        "mesh prec [hpc]": lambda: mesh_prec_hpc(tool_cfg),
     }
 
     tool_fn = tools_map.get(args.tools.lower())
@@ -460,6 +470,8 @@ def run_interactive():
         "Resize Tif [HPC]",
         "Crop Volume",
         "Crop Volume [HPC]",
+        "Mesh Prec",
+        "Mesh Prec [HPC]",
         "Modify Global Config",
         "View Current Config",
     ]
@@ -483,6 +495,8 @@ def run_interactive():
         "resize tif [hpc]": "Resize tif volumes to new voxel size or dimension by using hpc resources.",
         "crop volume": "Crop a region from a volume (tif/h5/precomputed).",
         "crop volume [hpc]": "Crop a region from a volume by using hpc resources.",
+        "mesh prec": "Generate 3D meshes from precomputed segmentation volumes using igneous.",
+        "mesh prec [hpc]": "Generate 3D meshes from precomputed segmentation volumes by using hpc resources.",
         "modify global config": "Modify the global configuration files for each module",
         "view current config":"View the global configuration files for each module",
     }
@@ -530,13 +544,13 @@ def run_interactive():
             console.print("[yellow]Returning to main menu...[/yellow]")
             break
 
-        if selected == "19":
+        if selected == "21":
             cfg, cfg_path = modify_global_config(cfg, cfg_path)
             print("Press Enter to return menu.")
             input("> ").strip().lower()
             continue
 
-        if selected == "20":
+        if selected == "22":
             console.rule("[bold bright_white]Current Global Config[/bold bright_white]", style="bright_cyan")
             config_table = Table(
                     box=box.SIMPLE,
@@ -619,6 +633,8 @@ def main():
             "resize-tif-hpc",
             "crop-volume",
             "crop-volume-hpc",
+            "mesh-prec",
+            "mesh-prec-hpc",
         ],
         required=False,
     )

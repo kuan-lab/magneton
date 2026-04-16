@@ -24,6 +24,7 @@ This is the **authoritative static registry**. If a new pipeline function/stage/
 | `mask_tif` / `apply mask tif` | `toolkit/configs/` | `config_mask_tif.yaml` | `toolkit.mask_tif` |
 | `resize_tif` / `resize` | `toolkit/configs/` | `config_resize_tif.yaml` | `toolkit.resize_tif` |
 | `crop` / `crop volume` | `toolkit/configs/` | `config_crop.yaml`, `marmoset_project/bouton/configs/crop_{b,c,f}.yaml` | `toolkit.crop` |
+| `mesh` / `meshing` / `mesh prec` | `toolkit/configs/` | `config_mesh.yaml`, `config_mesh_test1.yaml` | `toolkit.mesh` |
 
 ### PyTorch Connectomics (affinity prediction)
 
@@ -111,6 +112,17 @@ When generating a config, walk the fields below for the chosen stage. Fields alr
 - `crop.coords` — `[x1, x2, y1, y2, z1, z2]`
 - `crop.h5_key` (only if h5 input)
 - `crop.resolution` — `[x, y, z]` nm
+- `hpc.*`
+
+### mesh
+- `mesh.source_path` — path to precomputed segmentation volume (uint32 segment IDs)
+- `mesh.queuepath` — igneous task state dir (usually `magneton/igneous_tasks`)
+- `mesh.num_workers` — parallel workers (match to HPC `cpus`)
+- `mesh.mip` — mip level to mesh from (0 = full resolution)
+- `mesh.shape` — `[x, y, z]` spatial block size for meshing tasks (default `[448, 448, 448]`)
+- `mesh.simplification` — bool, run mesh simplification after marching cubes
+- `mesh.max_simplification_error` — max error in nm during simplification (higher = smaller files)
+- `mesh.dust_threshold` — min voxel count for a segment to get a mesh (`null` = mesh everything)
 - `hpc.*`
 
 ### pytc training (Isotropic-Neuron-Base.yaml style)
