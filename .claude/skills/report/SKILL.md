@@ -77,26 +77,21 @@ If today's entry already exists, extend it by merging into existing structure, n
 - **claude_notes**: extend `## Summary` to cover new work; add new bullets under existing file headers, or new file headers if a new file was touched.
 - **lab_notebook**: merge new content into matching `##` sections; add new `##` sections only for genuinely new topics.
 
-## Draft review loop
+## Write-first workflow
 
-1. Present the full draft(s) in the response as fenced markdown blocks.
-2. Wait for user feedback.
-3. On "add X" / "remove Y" / "change Z", apply the edit and **re-present the full updated draft** (not a diff).
-4. Continue until the user approves ("ship it", "looks good", etc.).
-
-## After approval
-
-1. **Write local files**:
+1. **Write local files directly** — do not present drafts in chat first:
    - `claude_notes/log_MM_DD_YYYY.md`
    - `lab_notebook/YYYY-MM-DD.md`
 
-2. **Sync lab_notebook to Notion** (skip if lab_notebook wasn't produced):
+2. **Present for edit approval**: Tell the user the files have been written and ask if they want any edits before syncing/committing. On "add X" / "remove Y" / "change Z", apply the edit to the file directly and re-ask. On approval ("looks good", "ship it", etc.), proceed to sync and commit.
+
+4. **Sync lab_notebook to Notion** (skip if lab_notebook wasn't produced):
    - Parent page ID: `320082e8595e811a86f0eb6079317dc2` (`lab_notebook` under `Tim`)
    - `notion-fetch` the parent and look for a child page titled `YYYY-MM-DD`.
    - If it exists → `notion-update-page` to replace its content with the merged draft.
    - If not → `notion-create-pages` with parent set to the `lab_notebook` page ID, title `YYYY-MM-DD`, content is the markdown draft.
 
-3. **Git commit and push** (skip entirely if only `/report lab` was run):
+5. **Git commit and push** (skip entirely if only `/report lab` was run):
    - Stage only: `claude_notes/log_MM_DD_YYYY.md` + code files that were part of this session.
    - **Never stage** `lab_notebook/` (gitignored).
    - Commit message: match recent commits' style (imperative, concise — see `git log -5`).
