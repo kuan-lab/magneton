@@ -75,8 +75,8 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     gpus = hpc.get("gpus", "a40:1")
     constraint = hpc.get("constraint", None)
     partition = hpc.get("partition", None)
+    qos = hpc.get("qos", None)
     # account = hpc.get("account", None)
-    # qos = hpc.get("qos", None)
     extra_modules = hpc.get("extra_modules", [])
 
     conda = hpc.get("conda", None)
@@ -145,6 +145,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         ]
     if partition:   lines.append(f"#SBATCH --partition={partition}")
     if constraint: lines.append(f'#SBATCH --constraint="{constraint}"')
+    if qos:         lines.append(f"#SBATCH --qos={qos}")
 
     # module load
     for m in extra_modules:
