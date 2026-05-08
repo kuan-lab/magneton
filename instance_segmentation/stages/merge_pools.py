@@ -45,25 +45,68 @@ def _compute_global_offsets(blocks_meta, start_gid=1):
     return offsets, cur
 
 
-def _pairs_for_overlaps(blocks_meta):
+def _pairs_for_overlaps(blocks_meta, block_step_zyx=None):
     """
-    List all pairs of blocks (i, j, ov_zyx, global_box_i, global_box_j) that intersect, where i < j.
-    ov_zyx = (zz1, zz2, yy1, yy2, xx1, xx2)
+    List all pairs of blocks (i, j, ov_zyx, global_box_i, global_box_j) that
+    spatially intersect, where i < j (using block index for de-dup).
+
+    If `block_step_zyx` is provided, blocks are indexed by their grid coords
+    (z1//step, y1//step, x1//step) and each block only checks its 26 grid
+    neighbors. O(N) — required for large volumes (~700k blocks at 30 TB).
+
+    If `block_step_zyx` is None, falls back to the legacy O(N²) check.
     """
     done = [b for b in blocks_meta if b.get("done", False)]
     done.sort(key=lambda b: b["index"])
     pairs = []
-    #  Simple O(N^2); if there are many blocks, grid/index optimization can be used.
-    for a in range(len(done)):
-        i = done[a]["index"]
-        Ai = tuple(done[a]["coords"])
-        for b in range(a + 1, len(done)):
-            j = done[b]["index"]
-            Bj = tuple(done[b]["coords"])
-            ov = intersect_boxes_zyx(Ai, Bj)
-            if ov is None:
+
+    if block_step_zyx is None:
+        # Legacy O(N²) — kept for cases where the step isn't deducible.
+        for a in range(len(done)):
+            i = done[a]["index"]
+            Ai = tuple(done[a]["coords"])
+            for b in range(a + 1, len(done)):
+                j = done[b]["index"]
+                Bj = tuple(done[b]["coords"])
+                ov = intersect_boxes_zyx(Ai, Bj)
+                if ov is None:
+                    continue
+                pairs.append((i, j, ov, Ai, Bj))
+        return pairs
+
+    # Grid-indexed: each block only checks 26 neighbors. O(N).
+    sz, sy, sx = block_step_zyx
+    if sz <= 0 or sy <= 0 or sx <= 0:
+        raise ValueError(f"block_step_zyx must be positive, got {block_step_zyx}")
+
+    grid = {}
+    for blk in done:
+        z1, _, y1, _, x1, _ = blk["coords"]
+        key = (z1 // sz, y1 // sy, x1 // sx)
+        grid[key] = blk
+
+    NEIGHBORS = [(dz, dy, dx)
+                 for dz in (-1, 0, 1)
+                 for dy in (-1, 0, 1)
+                 for dx in (-1, 0, 1)
+                 if (dz, dy, dx) != (0, 0, 0)]
+
+    for blk in done:
+        z1, _, y1, _, x1, _ = blk["coords"]
+        gz, gy, gx = z1 // sz, y1 // sy, x1 // sx
+        Ai = tuple(blk["coords"])
+        i = blk["index"]
+        for dz, dy, dx in NEIGHBORS:
+            nbr = grid.get((gz + dz, gy + dy, gx + dx))
+            if nbr is None:
                 continue
-            pairs.append((i, j, ov, Ai, Bj))
+            j = nbr["index"]
+            if j <= i:
+                continue  # de-dup (i, j) pairs by index
+            Bj = tuple(nbr["coords"])
+            ov = intersect_boxes_zyx(Ai, Bj)
+            if ov is not None:
+                pairs.append((i, j, ov, Ai, Bj))
     return pairs
 
 
@@ -155,8 +198,17 @@ def build_id_pools_parallel(global_cfg, stage_cfg, restart=False):
     with open(os.path.join(merge_ckpt_dir, "global_offsets.json"), "w") as f:
         json.dump({"offsets": offsets, "next_gid": next_gid}, f, indent=2)
 
+    # Compute block step (block_size − overlap) so we can use grid-indexed
+    # O(N) pair enumeration. Falls back to legacy O(N²) if step isn't in cfg.
+    block_step_zyx = None
+    blk_cfg = global_cfg.get("block", {})
+    if "size" in blk_cfg:
+        size = list(blk_cfg["size"])
+        ovl = list(blk_cfg.get("overlap", [0, 0, 0]))
+        block_step_zyx = tuple(int(s) - int(o) for s, o in zip(size, ovl))
+
     # List all intersecting block pairs
-    pairs = _pairs_for_overlaps(blocks_meta)
+    pairs = _pairs_for_overlaps(blocks_meta, block_step_zyx=block_step_zyx)
     if not pairs:
         print("[INFO] No overlapping pairs found.")
         # Still writing blank, unions.txt

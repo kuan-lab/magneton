@@ -1,67 +1,41 @@
 # -*- coding: utf-8 -*-
 import os
 import math
-import json
 import subprocess
 from pathlib import Path
 
-from magneton.instance_segmentation.config import load_config, load_global_config_path
-from magneton.instance_segmentation.utils.block_utils import generate_blocks_zyx
 from cloudvolume import CloudVolume
+
+from magneton.instance_segmentation.config import load_config, load_global_config_path
+from magneton.instance_segmentation.utils.meta_utils import load_index_meta
+from magneton.instance_segmentation.stages.merge_apply import _ensure_output_volume
 
 
 def _ensure_dir(p: str):
     Path(p).mkdir(parents=True, exist_ok=True)
 
 
-def _pending_block_indices(cfg, restart=False):
-    """Compute all blocks and filter out completed blocks (depending on checkpoints/local/*.done)"""
-    input_path = cfg["paths"]["input"]
-    mip = cfg.get("local_stage", {}).get("mip", 0)
+def _count_done_blocks(global_cfg, stage_cfg):
+    """Count the blocks marked done in the segmentation metadata dir.
 
-    aff_vol = CloudVolume(input_path, mip=mip, bounded=False, progress=False)
-    vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
-    vol_shape_zyx = (vol_size_xyz[2], vol_size_xyz[1], vol_size_xyz[0])
-
-    block_size = tuple(cfg["block"]["size"])
-    overlap = tuple(cfg["block"]["overlap"])
-    blocks = generate_blocks_zyx(vol_shape_zyx, block_size, overlap)
-
-    local_ckpt_dir = cfg["checkpoint"]["segmentation_dir"]
-    os.makedirs(local_ckpt_dir, exist_ok=True)
-
-    pending = []
-    for i, _coords in enumerate(blocks):
-        done_flag = os.path.join(local_ckpt_dir, f"block_{i:04d}.done")
-        if os.path.exists(done_flag) or restart:
-            pending.append(i)
-    return pending
+    merge_apply iterates the same set, so this gives the SLURM array size
+    when divided by blocks_per_job.
+    """
+    metadata_dir = stage_cfg.get("metadata_dir", "./local_metadata")
+    index_data = load_index_meta(metadata_dir)
+    blocks_meta = [b for b in index_data.get("blocks", []) if b.get("done", False)]
+    return len(blocks_meta)
 
 
-def _write_manifest(job_dir: str, indices, blocks_per_job: int):
-    """List the indexes to be processed in manifest.txt (each line containing a comma-separated group of indexes)."""
-    _ensure_dir(job_dir)
-    chunks = [
-        indices[i:i + blocks_per_job]
-        for i in range(0, len(indices), blocks_per_job)
-    ]
-    manifest = os.path.join(job_dir, "manifest.txt")
-    with open(manifest, "w") as f:
-        for group in chunks:
-            f.write(",".join(map(str, group)) + "\n")
-    return manifest, len(chunks)
-
-
-def _slurm_script(cfg, stage_cfg, job_dir, array_len):
-    hpc = stage_cfg["hpc"]
+def _slurm_script(cfg, stage_cfg, job_dir, num_tasks, blocks_per_job, batch_num):
+    # Prefer hpc_apply (light, SLURM-array). Fall back to hpc for legacy
+    # configs that have only one shared block.
+    hpc = stage_cfg.get("hpc_apply") or stage_cfg["hpc"]
     python_bin = hpc.get("python_bin", "python")
-    workers_per_job = int(hpc.get("workers_per_job", 2))
     time = hpc.get("time", "04:00:00")
     mem = hpc.get("mem", "16G")
     cpus = hpc.get("cpus", "8")
     partition = hpc.get("partition", None)
-    # account = hpc.get("account", None)
-    # qos = hpc.get("qos", None)
     extra_modules = hpc.get("extra_modules", [])
 
     conda = hpc.get("conda", None)
@@ -74,20 +48,17 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
 
     lines = [
         "#!/bin/bash",
-        f"#SBATCH --job-name=segmentation_chunks",
+        f"#SBATCH --job-name=merge_apply",
         f"#SBATCH --time={time}",
         f"#SBATCH --ntasks=1 --nodes=1",
         f"#SBATCH --cpus-per-task={cpus}",
         f"#SBATCH --mem-per-cpu={mem}",
-        f"#SBATCH --array=0-{array_len-1}",
+        f"#SBATCH --array=0-{num_tasks-1}%{batch_num}",
         f"#SBATCH --output={log_dir}/%x_%A_%a.out",
         f"#SBATCH --error={log_dir}/%x_%A_%a.err",
     ]
     if partition:   lines.append(f"#SBATCH --partition={partition}")
-    # if account:     lines.append(f"#SBATCH --account={account}")
-    # if qos:         lines.append(f"#SBATCH --qos={qos}")
 
-    # module load
     for m in extra_modules:
         lines.append(f"module load {m}")
         if m == "StdEnv":
@@ -96,21 +67,16 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     if env:         lines.append(f"conda activate {env}")
     if work_path:   lines.append(f"cd {work_path}")
 
-    manifest = os.path.join(job_dir, "manifest.txt")
     global_cfgs = load_global_config_path("magneton/config.yaml")
-    # global_cfgs = cfg
-    # cfg_path = global_cfgs.get("instance_segmentation/mian", "magneton/instance_segmentation/configs/config.yaml")
     cfg_path = (
         global_cfgs.get("instance_segmentation", {})
                 .get("main", "magneton/instance_segmentation/configs/config.yaml")
     )
     lines += [
         "set -e",
-        f'echo \"Running: {manifest}\"',
-
-        # Run the locally parallel scripts within each job (which will parse indices and run on a single node using ProcessPool).
         f"{python_bin} -m magneton.instance_segmentation.stages.merge_apply "
-        f"--config {cfg_path}"
+        f"--config {cfg_path} "
+        f"--task-id ${{SLURM_ARRAY_TASK_ID}} --blocks-per-task {blocks_per_job}"
     ]
 
     with open(script_path, "w") as f:
@@ -121,30 +87,40 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
 
 def submit_local_hpc(global_cfg, stage_cfg, restart=False, dry_run=False):
     """
-    Generate job lists and submission scripts (Slurm job arrays).
-    Process a set of block indices locally on nodes using instance_segmentation.tools.run_local_shard.
+    Submit a SLURM array job that runs merge_apply on slices of the block
+    list. Each task processes blocks_per_job blocks; cores are chunk-disjoint
+    by construction (compute_core_region snap-down), so concurrent tasks
+    write to non-overlapping output chunks without locking.
     """
-    hpc = stage_cfg.get("hpc", {})
+    hpc = stage_cfg.get("hpc_apply") or stage_cfg.get("hpc", {})
     if not hpc.get("enable", False):
-        print("[INFO] local_stage.hpc.enable=false, HPC submission is disabled.")
+        print("[INFO] merge_stage hpc_apply.enable=false, HPC submission is disabled.")
         return
 
     scheduler = hpc.get("scheduler", "slurm").lower()
     job_dir = hpc.get("job_dir", "magneton/jobs/merge")
     blocks_per_job = int(hpc.get("blocks_per_job", 1))
+    batch_num = int(hpc.get("batch_num", 64))
 
-    # Calculate the blocks to be processed
-    pending = _pending_block_indices(global_cfg, restart=restart)
-    if not pending:
-        print("[INFO] No pending blocks (or all completed).")
+    n_blocks = _count_done_blocks(global_cfg, stage_cfg)
+    if n_blocks == 0:
+        print("[INFO] No done blocks in metadata; nothing to apply.")
         return
+    num_tasks = math.ceil(n_blocks / blocks_per_job)
+    print(f"[INFO] merge_apply: {n_blocks} blocks "
+          f"-> {num_tasks} SLURM tasks (blocks_per_job={blocks_per_job}, "
+          f"concurrency cap={batch_num})")
 
-    manifest, n_chunks = _write_manifest(job_dir, pending, blocks_per_job)
-    print(f"[INFO] {len(pending)} blocks pending processing, manifest: {manifest}.")
+    # Pre-create the output segmentation volume so workers find it ready.
+    _ensure_output_volume(
+        global_cfg["paths"]["input"],
+        global_cfg["paths"]["output"],
+        stage_cfg.get("mip", 0),
+    )
 
-    # Generate Script
     if scheduler == "slurm":
-        script_path = _slurm_script(global_cfg, stage_cfg, job_dir, 1)
+        script_path = _slurm_script(global_cfg, stage_cfg, job_dir,
+                                    num_tasks, blocks_per_job, batch_num)
         submit_cmd = ["sbatch", script_path]
     else:
         raise ValueError(f"Unknown scheduler: {scheduler}")
@@ -158,6 +134,7 @@ def submit_local_hpc(global_cfg, stage_cfg, restart=False, dry_run=False):
         except Exception as e:
             print(f"[WARN] Submission failed:{e}")
             print(f"[HINT] You can manually execute the command:{' '.join(submit_cmd)}")
+
 
 def apply_pools_to_global_hpc(global_cfg, stage_cfg, restart=False, dry_run=False):
     submit_local_hpc(global_cfg, stage_cfg, restart=restart, dry_run=dry_run)

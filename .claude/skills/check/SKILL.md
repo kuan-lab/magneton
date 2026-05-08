@@ -45,6 +45,8 @@ To get the array job ID from a jobs dir, `ls logs/` and parse the middle field o
 
 ## Invocation flow
 
+**Execution order is strict: 1 → 2 → 3 → 4.** Do NOT run `squeue -u yf354` or `sacct -u` in parallel with directory discovery as a "safety check" — when the English names a stage, the dir-first path is faster and avoids pulling unrelated job rows into context. Only fall back to a broad `squeue -u yf354` when Step 1 cannot identify a stage at all.
+
 ### Step 1 — Parse the English
 
 From the argument, extract:
@@ -57,12 +59,16 @@ If any of stage / intent is unclear, ask a short clarifying question (don't assu
 
 ### Step 2 — Locate the jobs directory
 
+When the English clearly names a stage (Step 1 produced a keyword), this is the **mandatory first lookup** — do not query SLURM until the dir is chosen and a job ID is in hand (Step 3).
+
 1. `ls jobs/` and filter by the stage keyword's dir prefix(es).
 2. Narrow using key phrases from the English (e.g., "fennel" → `seg_fennel`, `seg_fennel_wztest`).
 3. If still multiple candidates:
    - For **current** queries: pick the one with the newest file in `logs/` (most recent activity).
    - For **historical** queries with multiple candidates: list them compactly and ask which.
 4. For comparison mode: collect all matching dirs; proceed to analyze each.
+
+Only if Step 1 produced no stage keyword at all, fall back to `squeue -u yf354` to discover what's running and infer the dir from there.
 
 ### Step 3 — Find the job ID(s)
 

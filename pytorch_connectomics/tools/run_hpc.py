@@ -9,7 +9,12 @@ import tifffile as tiff
 from cloudvolume import CloudVolume
 
 from magneton.pytorch_connectomics.utils.config import load_config, load_global_config_path
+from magneton.pytorch_connectomics.inference_grid import (
+    is_precomputed_url, volume_info_from_cv, block_count, apply_roi,
+)
+from magneton.pytorch_connectomics.init_prec_output import init_output_volume
 import gc
+import math as _math
 import subprocess
 from pathlib import Path
 
@@ -101,8 +106,58 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
                 .get("checkpoint", "magneton/pytorch_connectomics/configs/checkpoint.yaml")
     )
 
+    # Direct-precomputed inference: detect by reading cfg-base's IMAGE_NAME.
+    # If precomputed, replace temp-config generation with block-grid sizing
+    # and pass --task-id / --chunks-per-task to run.py.
+    precomputed_flag = False
+    if cfg.stage == "inference-hpc":
+        try:
+            with open(cfg_base_path) as f:
+                _base = yaml.safe_load(f) or {}
+            _image_name = _base.get("INFERENCE", {}).get("IMAGE_NAME", None)
+            _output_path = _base.get("INFERENCE", {}).get("OUTPUT_PATH", None)
+            if is_precomputed_url(_image_name) and is_precomputed_url(_output_path):
+                precomputed_flag = True
+        except Exception:
+            pass
+
+    # Both legacy and precomputed paths are multi-job by nature, so
+    # chunks_per_task/batch_num live under mutil_jobs_configs in either case.
+    _mj_cfg = hpc.get("mutil_jobs_configs", {}) or {}
+    chunks_per_task = int(_mj_cfg.get("chunks_per_task", hpc.get("chunks_per_task", 1)))
+    if precomputed_flag:
+        vol_shape_zyx, vol_offset_zyx, _ = volume_info_from_cv(_image_name, mip=0)
+        # Pre-create output volume now so workers find it ready.
+        _geom = _base.get("INFERENCE", {}).get("GEOMETRY", {}) or {}
+        _core = int(_geom.get("CORE_SIZE", 512))
+        _chunk = int(_geom.get("OUTPUT_CHUNK_SIZE", 128))
+        _roi = _geom.get("ROI", None)
+        vol_shape_zyx, vol_offset_zyx = apply_roi(
+            vol_shape_zyx, vol_offset_zyx, _roi, output_chunk_size=_chunk)
+        _out_planes = int(_base.get("MODEL", {}).get("OUT_PLANES", 3))
+        init_output_volume(_image_name, _output_path, mip=0,
+                           num_channels=_out_planes,
+                           dtype="uint8", chunk_size=_chunk)
+        n_blocks = block_count(vol_shape_zyx, core_size=_core)
+        num_batches = _math.ceil(n_blocks / chunks_per_task)
+        batch_num = int(_mj_cfg.get("batch_num", hpc.get("batch_num", num_batches)))
+        print(f"[INFO] precomputed: {n_blocks} blocks "
+              f"-> {num_batches} SLURM tasks (chunks_per_task={chunks_per_task})")
+        lines = [
+            "#!/bin/bash",
+            f"#SBATCH --job-name=pytc",
+            f"#SBATCH --time={time}",
+            f"#SBATCH --ntasks=1 --nodes=1",
+            f"#SBATCH --cpus-per-task={cpus}",
+            f"#SBATCH --mem-per-gpu={mem}",
+            f"#SBATCH --gpus={gpus}",
+            f"#SBATCH --array=0-{num_batches-1}%{batch_num}",
+            f"#SBATCH --output={log_dir}/%x_%A_%a.out",
+            f"#SBATCH --error={log_dir}/%x_%A_%a.err",
+        ]
+
     mutil_jobs_flag = hpc.get("mutil_jobs", False)
-    if mutil_jobs_flag and cfg.stage in ["inference-hpc",]:
+    if not precomputed_flag and mutil_jobs_flag and cfg.stage in ["inference-hpc",]:
         mutil_jobs_configs = hpc.get("mutil_jobs_configs", {})
         configs_save_path = mutil_jobs_configs.get("configs_save_path", '')
         input_folder = mutil_jobs_configs.get("input_folder", '')
@@ -129,8 +184,8 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
             f"#SBATCH --error={log_dir}/%x_%A_%a.err",
         ]
         cfg_base_path = os.path.join(configs_save_path, "temp_config_${SLURM_ARRAY_TASK_ID}.yaml")
-        
-    else:
+
+    elif not precomputed_flag:
         lines = [
             "#!/bin/bash",
             f"#SBATCH --job-name=pytc",
@@ -166,6 +221,13 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         lines += [
             f"{python_bin} -u -m magneton.pytorch_connectomics.tools.run "
             f"--config-file {cfg_file_path} --config-base {cfg_base_path} --checkpoint {checkpoint_path}"
+        ]
+    elif precomputed_flag:
+        lines += [
+            f"{python_bin} -u -m magneton.pytorch_connectomics.tools.run "
+            f"--config-file {cfg_file_path} --config-base {cfg_base_path} "
+            f"--inference --checkpoint {checkpoint_path} "
+            f"--task-id ${{SLURM_ARRAY_TASK_ID}} --chunks-per-task {chunks_per_task}"
         ]
     else:
         lines += [

@@ -521,6 +521,20 @@ _C.INFERENCE.SAMPLES_PER_BATCH = 4
 # Change MODEL.RETURN_FEATS at inference time.
 _C.INFERENCE.MODEL_RETURN_FEATS = None
 
+# Geometry for direct-precomputed inference. Only takes effect when
+# INFERENCE.IMAGE_NAME / OUTPUT_PATH are precomputed URLs. Cores tile the
+# volume with disjoint, chunk-aligned writes (lock-free); halo gives the
+# model context near core boundaries.
+_C.INFERENCE.GEOMETRY = CN()
+_C.INFERENCE.GEOMETRY.CORE_SIZE = 512
+_C.INFERENCE.GEOMETRY.HALO = 32
+_C.INFERENCE.GEOMETRY.OUTPUT_CHUNK_SIZE = 128
+# Optional ROI to process. Flat 6-int list [z1, z2, y1, y2, x1, x2] in
+# absolute voxel coords (matching the input precomputed's voxel_offset).
+# None = whole volume. ROI bounds are snapped to chunk boundaries so
+# cores remain chunk-aligned (lock-free).
+_C.INFERENCE.GEOMETRY.ROI = None
+
 
 def get_cfg_defaults():
     r"""Get a yacs CfgNode object with default values for my_project."""

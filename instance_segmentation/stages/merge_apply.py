@@ -2,8 +2,8 @@
 import os
 import json
 import gc
+import math
 import numpy as np
-from concurrent.futures import ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 from cloudvolume import CloudVolume
 import argparse
@@ -15,9 +15,7 @@ from magneton.instance_segmentation.config import (
 )
 
 from magneton.instance_segmentation.utils.meta_utils import load_index_meta
-from magneton.instance_segmentation.utils.block_utils import (
-    compute_core_region, compute_chunk_set, color_blocks
-)
+from magneton.instance_segmentation.utils.block_utils import compute_core_region
 from magneton.instance_segmentation.utils.relabel_utils import (
     update_id_pools, build_rep_map_from_pools, relabel_array_inplace_with_map
 )
@@ -86,12 +84,36 @@ def _apply_block(block_meta, offsets, rep_map, output_path, core_bounds):
     return i
 
 
-def apply_pools_to_global(global_cfg, stage_cfg):
+def _ensure_output_volume(input_path, output_path, mip):
+    """Pre-create the segmentation output precomputed (idempotent)."""
+    try:
+        out_vol = CloudVolume(output_path, mip=mip, progress=False)
+        return out_vol
+    except Exception:
+        pass
+    aff_vol = CloudVolume(input_path, mip=mip, bounded=False, progress=False)
+    vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
+    seg_info = CloudVolume.create_new_info(
+        num_channels=1, layer_type="segmentation", data_type="uint32", encoding="raw",
+        resolution=aff_vol.resolution, voxel_offset=aff_vol.voxel_offset,
+        volume_size=vol_size_xyz, chunk_size=aff_vol.chunk_size,
+    )
+    out_vol = CloudVolume(output_path, info=seg_info, compress=False,
+                          progress=False, non_aligned_writes=True)
+    out_vol.commit_info(); out_vol.commit_provenance()
+    return out_vol
+
+
+def apply_pools_to_global(global_cfg, stage_cfg, task_id=None, blocks_per_task=None):
     """
-    Phase 2:
-    - Read offsets and unions generated in Phase 1
-    - Construct id_pools -> rep_map
-    - Parallel: read each block, apply offset + rep_map, trim to core, write to out_vol
+    Phase 2 worker: process this SLURM array task's slice of blocks.
+
+    The block grid produces cores that are chunk-disjoint by construction
+    (compute_core_region snaps interior boundaries to chunk multiples), so
+    SLURM array tasks can write concurrently without locks or graph-coloring.
+
+    task_id / blocks_per_task may also be passed via env vars or CLI; if both
+    are None, all blocks are processed in one go (legacy local-mode).
     """
     input_path     = global_cfg["paths"]["input"]
     output_path    = global_cfg["paths"]["output"]
@@ -105,114 +127,90 @@ def apply_pools_to_global(global_cfg, stage_cfg):
     export_tif_path    = export_cfg.get("path", "preview.tif")
     max_slices         = export_cfg.get("max_slices", 200)
 
-    # Worker count: config > SLURM allocation > CPU count
-    workers = int(stage_cfg.get("workers",
-        os.environ.get("SLURM_CPUS_PER_TASK", os.cpu_count() or 1)))
-
-    # Block overlap from global config
     overlap_zyx = tuple(global_cfg.get("block", {}).get("overlap", [0, 0, 0]))
 
-    # Read metadata
+    # Load all done blocks; sorted by index so task slicing is deterministic.
     index_data = load_index_meta(metadata_dir)
     blocks_meta = [b for b in index_data.get("blocks", []) if b.get("done", False)]
     blocks_meta.sort(key=lambda b: b["index"])
-    print(f"[INFO] Loaded metadata for {len(blocks_meta)} blocks")
+    n_blocks = len(blocks_meta)
+    print(f"[INFO] Loaded metadata for {n_blocks} blocks")
 
-    # Offsets / unions
+    # Slice for this SLURM array task. If unset (single-process local mode),
+    # process all blocks.
+    if task_id is None:
+        env_task = os.environ.get("SLURM_ARRAY_TASK_ID")
+        if env_task is not None:
+            task_id = int(env_task)
+    if task_id is None:
+        bid_start, bid_end = 0, n_blocks
+    else:
+        bpt = int(blocks_per_task or 1)
+        bid_start = task_id * bpt
+        bid_end = min(bid_start + bpt, n_blocks)
+        if bid_start >= bid_end:
+            print(f"[INFO] task_id={task_id} has no blocks (n_blocks={n_blocks}).")
+            return
+    task_blocks = blocks_meta[bid_start:bid_end]
+    print(f"[MERGE-APPLY] task_id={task_id} processing blocks "
+          f"[{bid_start},{bid_end}) of {n_blocks}")
+
+    # Offsets / unions (every task loads identical small files)
     offsets, next_gid = _load_offsets(merge_ckpt_dir)
     unions = _load_unions(merge_ckpt_dir)
     print(f"[INFO] Loaded {len(unions)} union pairs, next_gid={next_gid}")
 
-    # Generate pools
     id_pools = []
     for a, b in unions:
         update_id_pools(id_pools, a, b)
     rep_map = build_rep_map_from_pools(id_pools)
     print(f"[INFO] Pools={len(id_pools)}, rep_map entries={len(rep_map)}")
 
-    # Create global out_vol (using input resolution/voxel_offset/size)
+    # Pre-create output volume (idempotent — first task to arrive writes info,
+    # subsequent calls reuse). HPC submitter may also create this at submit
+    # time, in which case this is a no-op.
+    _ensure_output_volume(input_path, output_path, mip)
+
+    # Volume dims and chunk size for snap
     aff_vol = CloudVolume(input_path, mip=mip, bounded=False, progress=False)
     vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
     vol_shape_zyx = (vol_size_xyz[2], vol_size_xyz[1], vol_size_xyz[0])
-    seg_info = CloudVolume.create_new_info(
-        num_channels=1, layer_type="segmentation", data_type="uint32", encoding="raw",
-        resolution=aff_vol.resolution, voxel_offset=aff_vol.voxel_offset,
-        volume_size=vol_size_xyz, chunk_size=aff_vol.chunk_size,
-    )
-    out_vol = CloudVolume(output_path, info=seg_info, compress=False,
-                          progress=False, non_aligned_writes=True)
-    out_vol.commit_info(); out_vol.commit_provenance()
-
-    # Chunk size for chunk-aligned core snapping and graph coloring
     chunk_size_xyz = tuple(aff_vol.chunk_size)
     chunk_size_zyx = (chunk_size_xyz[2], chunk_size_xyz[1], chunk_size_xyz[0])
 
-    # Compute core regions for all blocks (snapped to chunk boundaries)
-    core_bounds = {}
-    for blk in blocks_meta:
-        core_bounds[blk["index"]] = compute_core_region(
+    # Process this task's blocks serially. Cores are chunk-disjoint between
+    # adjacent blocks by snap-down construction, so concurrent SLURM tasks
+    # writing different blocks never collide on a chunk.
+    for blk in tqdm(task_blocks, desc=f"merge_apply task={task_id}"):
+        core_bounds = compute_core_region(
             tuple(blk["coords"]), overlap_zyx, vol_shape_zyx, chunk_size_zyx
         )
+        _apply_block(blk, offsets, rep_map, output_path, core_bounds)
 
-    # Graph-color blocks by chunk conflict so each color group can write
-    # fully in parallel with no locking
-
-    chunk_sets = {blk["index"]: compute_chunk_set(core_bounds[blk["index"]], chunk_size_zyx)
-                  for blk in blocks_meta}
-    block_indices = [blk["index"] for blk in blocks_meta]
-    color_groups = color_blocks(block_indices, chunk_sets)
-    num_colors = len(color_groups)
-
-    print(f"[INFO] Graph coloring: {num_colors} colors for {len(blocks_meta)} blocks "
-          f"(chunk_size_zyx={chunk_size_zyx}, overlap={overlap_zyx})")
-    for c in sorted(color_groups):
-        print(f"  Color {c}: {len(color_groups[c])} blocks")
-
-    # Build index lookup for block metadata
-    blk_by_idx = {blk["index"]: blk for blk in blocks_meta}
-
-    # Process one color at a time — all blocks in a color write to disjoint
-    # chunks so no lock is needed within a color group
-    done = 0
-    with tqdm(total=len(blocks_meta), desc="Apply Pools (colored)") as pbar:
-        for c in sorted(color_groups):
-            group = color_groups[c]
-            with ProcessPoolExecutor(max_workers=workers) as ex:
-                futures = {}
-                for bi in group:
-                    fut = ex.submit(
-                        _apply_block,
-                        blk_by_idx[bi], offsets, rep_map, output_path,
-                        core_bounds[bi]
-                    )
-                    futures[fut] = bi
-
-                for fut in as_completed(futures):
-                    try:
-                        fut.result()
-                        done += 1
-                        pbar.update(1)
-                    except Exception as e:
-                        done += 1
-                        pbar.update(1)
-                        print(f"[WARN] Block {futures[fut]} failed: {e}")
-
-    # Optional: export preview
-    if export_tif_enabled:
-        from magneton.instance_segmentation.utils.io_utils import export_tif_from_volume
+    # Preview tif export only when running the whole volume in one process
+    if export_tif_enabled and task_id is None:
+        out_vol = CloudVolume(output_path, mip=mip, bounded=False, progress=False)
         export_tif_from_volume(out_vol, export_tif_path, max_slices=max_slices)
 
-    print("[DONE] Phase-2 finished, global volume ready.")
+    print(f"[DONE] task_id={task_id} processed {len(task_blocks)} blocks.")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert 3D/4D TIFF or HDF5 to Neuroglancer Precomputed format.")
+    parser = argparse.ArgumentParser(description="Apply merge pools to global segmentation precomputed.")
     parser.add_argument("--config", default="configs/config_prec.yaml", type=str, help="Path to configuration YAML.")
+    parser.add_argument("--task-id", type=int, default=None,
+                        help="SLURM array task id (slices the block list). "
+                             "If unset, falls back to SLURM_ARRAY_TASK_ID env var, "
+                             "then to single-process mode (all blocks).")
+    parser.add_argument("--blocks-per-task", type=int, default=None,
+                        help="Blocks processed per SLURM array task.")
     args = parser.parse_args()
 
     cfg = load_config(args.config)
     stage_cfg = get_stage_config(cfg, "merge")
-    apply_pools_to_global(cfg, stage_cfg)
+    apply_pools_to_global(cfg, stage_cfg,
+                          task_id=args.task_id,
+                          blocks_per_task=args.blocks_per_task)
 
 
 if __name__ == "__main__":
