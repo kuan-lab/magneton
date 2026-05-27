@@ -38,6 +38,7 @@ console = Console()
 import magneton.instance_segmentation as ins_segmentation
 import magneton.pytorch_connectomics as aff_inference
 import magneton.toolkit as toolkit
+import magneton.analysis as analysis
 
 # ---------------------------------------------------
 # Config loader
@@ -109,6 +110,7 @@ def show_menu():
     table.add_row("1", "Processing Toolkit", "Data pre- and post-processing toolkit")
     table.add_row("2", "Affinity Map Inference", "Train / Infer affinity maps using deep learning models")
     table.add_row("3", "Instance Segmentation", "Perform block-based segmentation and merge across blocks")
+    table.add_row("4", "Mito Analysis", "Compute morphometric features per mito instance")
     table.add_row("0", "Exit", "Close CLI")
     console.print(table)
 
@@ -130,7 +132,7 @@ def main():
 
         while True:
             show_menu()
-            choice = Prompt.ask("\n> Select a module", choices=["0", "1", "2", "3"], default="0")
+            choice = Prompt.ask("\n> Select a module", choices=["0", "1", "2", "3", "4"], default="0")
 
             if choice == "1":
                 console.rule("[bold bright_white]Pre- and Post-Processing Toolkit[/bold bright_white]", style="bold white", characters="=")
@@ -143,6 +145,10 @@ def main():
             elif choice == "3":
                 console.rule("[bold bright_white]Instance Segmentation Module[/bold bright_white]", style="bold white", characters="=")
                 ins_segmentation.run_interactive()
+
+            elif choice == "4":
+                console.rule("[bold bright_white]Mito Analysis Module[/bold bright_white]", style="bold white", characters="=")
+                analysis.run_interactive()
 
             elif choice == "0":
                 console.print("\n[bold bright_red] Exiting Magneton... [/bold bright_red]\n")

@@ -25,6 +25,7 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 | `mask_prec` | `mask_prec` |
 | `mask_tif` | `mask_tif` |
 | `mesh`, `meshing` | `mesh` |
+| `analysis`, `morphometrics`, `mito features`, `mito analysis` | `analysis_*` |
 
 Note: `jobs/merge/` is the *toolkit* merge-volumes tool. `jobs/merge_*/` suffixed dirs are almost always *instance_segmentation* merge stage (from `merge_stage.hpc.job_dir` in the instance seg config). The keyword "merge" alone is ambiguous — infer from context (if the user is talking about segmentation/waterz flow, it's instance seg merge; if they just converted a volume, it's toolkit merge).
 

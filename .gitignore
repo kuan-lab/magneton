@@ -9,6 +9,10 @@ config.yaml
 toolkit/configs/
 instance_segmentation/configs/
 pytorch_connectomics/configs/*
+analysis/configs/
+
+# Analysis run outputs
+analysis/output/
 
 # SLURM jobs (scripts + logs)
 jobs/

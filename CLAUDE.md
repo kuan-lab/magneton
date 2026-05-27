@@ -20,6 +20,10 @@ magneton/
 │   ├── tools/                   # run_local_shard.py, etc.
 │   ├── waterz_block.py          # Neuron mode: waterz agglomeration
 │   └── mito_block.py            # Mito mode: binary_watershed
+├── analysis/                    # Per-instance morphometrics pipeline (mito features, future bouton/PSD)
+│   ├── configs/                 # Per-volume YAML configs
+│   ├── stages/                  # discover_bboxes, instance_features (+HPC), reduce_features
+│   └── lib/                     # features (PC math, hull, symmetry), surface_area (3 methods), plane_sampling, precomputed_io
 ├── jobs/                        # SLURM job scripts and logs
 │   ├── pytc/                    # PyTC inference jobs
 │   ├── merge/                   # Merge stage jobs
@@ -38,6 +42,7 @@ magneton/
    - `mito`: binary_watershed (sparse objects, respects background)
 4. **Merge** (`instance_segmentation/stages/merge_*`) - Stitch block-level segments into global IDs
 5. **Downsample** (`toolkit/tools/downsample_prec.py`) - Generate mip levels via igneous
+6. **Analysis** (`analysis/`) - Per-instance morphometrics: read high-mip volume → `find_objects` for bbox manifest → crop+features per mito (SLURM array) → concat to `morphometrics.parquet`. 19 features per mito (volume, surface area, sphericity, hull, max diameter, plus PC{length, inertia, symmetry, cross-section area, cross-section perimeter} for each of 3 PC axes). SA method selectable: `face_count`, `marching_cubes` (default), or paper-faithful `sqrt_kernel`.
 
 ## Key Conventions
 
