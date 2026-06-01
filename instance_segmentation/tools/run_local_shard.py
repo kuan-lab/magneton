@@ -8,7 +8,7 @@ from magneton.instance_segmentation.config import load_config, get_stage_config
 from magneton.instance_segmentation.stages.segmentation_stage import _process_block   
 from magneton.instance_segmentation.state.checkpoint import mark_local_done, is_local_done
 from magneton.instance_segmentation.utils.meta_utils import save_block_meta
-from magneton.instance_segmentation.utils.block_utils import generate_blocks_zyx
+from magneton.instance_segmentation.utils.block_utils import build_block_grid
 from cloudvolume import CloudVolume
 
 
@@ -16,11 +16,7 @@ def _get_blocks(cfg):
     input_path = cfg["paths"]["input"]
     mip = cfg.get("local_stage", {}).get("mip", 0)
     aff_vol = CloudVolume(input_path, mip=mip, bounded=False, progress=False)
-    vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
-    vol_shape_zyx = (vol_size_xyz[2], vol_size_xyz[1], vol_size_xyz[0])
-    block_size = tuple(cfg["block"]["size"])
-    overlap = tuple(cfg["block"]["overlap"])
-    return generate_blocks_zyx(vol_shape_zyx, block_size, overlap)
+    return build_block_grid(aff_vol, cfg)
 
 
 def main():

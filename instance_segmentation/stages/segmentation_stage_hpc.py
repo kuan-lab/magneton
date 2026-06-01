@@ -6,7 +6,7 @@ import subprocess
 from pathlib import Path
 
 from magneton.instance_segmentation.config import load_config, load_global_config_path
-from magneton.instance_segmentation.utils.block_utils import generate_blocks_zyx
+from magneton.instance_segmentation.utils.block_utils import build_block_grid
 from cloudvolume import CloudVolume
 
 
@@ -20,12 +20,7 @@ def _pending_block_indices(cfg, restart=False):
     mip = cfg.get("local_stage", {}).get("mip", 0)
 
     aff_vol = CloudVolume(input_path, mip=mip, bounded=False, progress=False)
-    vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
-    vol_shape_zyx = (vol_size_xyz[2], vol_size_xyz[1], vol_size_xyz[0])
-
-    block_size = tuple(cfg["block"]["size"])
-    overlap = tuple(cfg["block"]["overlap"])
-    blocks = generate_blocks_zyx(vol_shape_zyx, block_size, overlap)
+    blocks = build_block_grid(aff_vol, cfg)
 
     local_ckpt_dir = cfg["checkpoint"]["segmentation_dir"]
     os.makedirs(local_ckpt_dir, exist_ok=True)

@@ -7,7 +7,8 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 from magneton.instance_segmentation.waterz_block import run_waterz_block
 from magneton.instance_segmentation.mito_block import run_mito_block
-from magneton.instance_segmentation.utils.block_utils import generate_blocks_zyx
+from magneton.instance_segmentation.bouton_block import run_bouton_block, read_neuron_ref_block
+from magneton.instance_segmentation.utils.block_utils import build_block_grid
 from magneton.instance_segmentation.state.checkpoint import mark_local_done, is_local_done
 from magneton.instance_segmentation.utils.meta_utils import save_block_meta
 
@@ -36,6 +37,7 @@ def segmentation_blocks(global_cfg, stage_cfg, restart=False):
     mode_cfg = global_cfg.get("mode", {})
     mode_type = mode_cfg.get("type", "neuron")
     mito_cfg = mode_cfg.get("mito", {})
+    bouton_cfg = mode_cfg.get("bouton", {})
 
     # Neuron mode (waterz) parameters
     thresholds     = stage_cfg.get("thresholds", [0.4])
@@ -54,11 +56,16 @@ def segmentation_blocks(global_cfg, stage_cfg, restart=False):
         mask_vol = CloudVolume(mask_path, mip=0, bounded=False, progress=False)
     else:
         mask_vol = None
-    vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
-    vol_shape_zyx = (vol_size_xyz[2], vol_size_xyz[1], vol_size_xyz[0])
-
-    # Generate blocks
-    blocks = generate_blocks_zyx(vol_shape_zyx, block_size, overlap)
+    # Bouton mode: reference neuron affinity volume for membrane gating
+    if mode_type == "bouton":
+        # Neuron ref opened at ITS OWN finest mip (mip=0); resolution mismatch
+        # with the bouton input is handled by read_neuron_ref_block.
+        neuron_ref_vol = CloudVolume(bouton_cfg["neuron_ref_path"], mip=0,
+                                     bounded=False, fill_missing=True, progress=False)
+    else:
+        neuron_ref_vol = None
+    # Generate blocks (single source of truth: ROI-aware, deterministic)
+    blocks = build_block_grid(aff_vol, global_cfg)
 
     if restart:
         print(f"[INFO] Restart mode: clearing local checkpoints and metadata at {local_ckpt_dir}, {metadata_dir}")
@@ -97,6 +104,22 @@ def segmentation_blocks(global_cfg, stage_cfg, restart=False):
                 seed_min_size=mito_cfg.get("seed_min_size", 32),
                 remove_small_mode=mito_cfg.get("remove_small_mode", "background"),
                 erosion_iters=mito_cfg.get("erosion_iters", 0)
+            )
+        elif mode_type == "bouton":
+            neuron_ref = read_neuron_ref_block(neuron_ref_vol, (z1, z2, y1, y2, x1, x2), aff_vol.resolution)
+            seg_local = run_bouton_block(
+                aff,
+                neuron_ref,
+                mask=mask,
+                seed_threshold=bouton_cfg.get("seed_threshold", 0.98),
+                foreground_threshold=bouton_cfg.get("foreground_threshold", 0.85),
+                min_segment_size=bouton_cfg.get("min_segment_size", 128),
+                seed_min_size=bouton_cfg.get("seed_min_size", 32),
+                remove_small_mode=bouton_cfg.get("remove_small_mode", "background"),
+                erosion_iters=bouton_cfg.get("erosion_iters", 0),
+                neuron_aff_threshold=bouton_cfg.get("neuron_aff_threshold", 0.5),
+                neuron_aff_reduce=bouton_cfg.get("neuron_aff_reduce", "mean"),
+                dilation_iters=bouton_cfg.get("dilation_iters", 0),
             )
         else:  # neuron mode (waterz)
             seg_local = run_waterz_block(aff, mask=mask,
@@ -162,6 +185,7 @@ def _process_block(
         mode_cfg = {}
     mode_type = mode_cfg.get("type", "neuron")
     mito_cfg = mode_cfg.get("mito", {})
+    bouton_cfg = mode_cfg.get("bouton", {})
 
     # Neuron mode (waterz) parameters
     thresholds     = stage_cfg.get("thresholds", [0.4])
@@ -190,6 +214,25 @@ def _process_block(
             seed_min_size=mito_cfg.get("seed_min_size", 32),
             remove_small_mode=mito_cfg.get("remove_small_mode", "background"),
             erosion_iters=mito_cfg.get("erosion_iters", 0)
+        )
+    elif mode_type == "bouton":
+        # Neuron ref opened at its own finest mip; resolution mismatch handled below.
+        neuron_ref_vol = CloudVolume(bouton_cfg["neuron_ref_path"], mip=0,
+                                     bounded=False, fill_missing=True, progress=False)
+        neuron_ref = read_neuron_ref_block(neuron_ref_vol, (z1, z2, y1, y2, x1, x2), aff_vol.resolution)
+        seg_local = run_bouton_block(
+            aff,
+            neuron_ref,
+            mask=mask,
+            seed_threshold=bouton_cfg.get("seed_threshold", 0.98),
+            foreground_threshold=bouton_cfg.get("foreground_threshold", 0.85),
+            min_segment_size=bouton_cfg.get("min_segment_size", 128),
+            seed_min_size=bouton_cfg.get("seed_min_size", 32),
+            remove_small_mode=bouton_cfg.get("remove_small_mode", "background"),
+            erosion_iters=bouton_cfg.get("erosion_iters", 0),
+            neuron_aff_threshold=bouton_cfg.get("neuron_aff_threshold", 0.5),
+            neuron_aff_reduce=bouton_cfg.get("neuron_aff_reduce", "mean"),
+            dilation_iters=bouton_cfg.get("dilation_iters", 0),
         )
     else:  # neuron mode (waterz)
         seg_local = run_waterz_block(aff, mask=mask, seg_thresholds=thresholds, aff_thresholds=aff_thresholds,
@@ -258,11 +301,9 @@ def segmentation_blocks_parallel(global_cfg, stage_cfg, restart=False):
 
     # Open input volume (main process used only for retrieving shape/meta information)
     aff_vol = CloudVolume(input_path, mip=mip, bounded=False, progress=False)
-    vol_size_xyz = tuple(aff_vol.info["scales"][0]["size"])
-    vol_shape_zyx = (vol_size_xyz[2], vol_size_xyz[1], vol_size_xyz[0])
 
-    # Generated in blocks
-    blocks = generate_blocks_zyx(vol_shape_zyx, block_size, overlap)
+    # Generated in blocks (single source of truth: ROI-aware, deterministic)
+    blocks = build_block_grid(aff_vol, global_cfg)
 
     # Restart
     if restart:

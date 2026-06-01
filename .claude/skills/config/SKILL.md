@@ -37,7 +37,7 @@ This is the **authoritative static registry**. If a new pipeline function/stage/
 
 | Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
 |---|---|---|---|
-| `segmentation` / `instance segmentation` / `waterz` / `mito seg` | `instance_segmentation/configs/` | `config.yaml`, `config_b.yaml`, `config_c.yaml`, `config_f.yaml`, `config_30tb.yaml` | `instance_segmentation.main` |
+| `segmentation` / `instance segmentation` / `waterz` / `mito seg` / `bouton seg` | `instance_segmentation/configs/` | `config.yaml`, `config_b.yaml`, `config_c.yaml`, `config_f.yaml`, `config_30tb.yaml`; bouton mode: `config_fib_b_bouton_v1.yaml` (full vol), `config_fib_b_bouton_roi_test.yaml` (single-block ROI) | `instance_segmentation.main` |
 
 Note: one instance_segmentation config file holds **both** the segmentation stage and the merge stage (two top-level sections: `segmentation_stage` and `merge_stage`). They are not separate files.
 
@@ -159,12 +159,14 @@ The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a h
 - `paths.input` — affinity precomputed
 - `paths.output` — global instance output
 - `paths.output_local_base` — per-block output base path
-- `mode.type` — `neuron` or `mito`
+- `mode.type` — `neuron` (waterz), `mito` (binary_watershed), or `bouton` (binary_watershed + neuron membrane gating)
 - `mode.mito.*` (only if mito): `seed_threshold`, `foreground_threshold`, `min_segment_size`, `seed_min_size`, `remove_small_mode`, `erosion_iters`
+- `mode.bouton.*` (only if bouton): same watershed knobs as mito **plus** membrane gating. **Required** `neuron_ref_path` — a neuron affinity precomputed; voxels where neuron affinity is low (membrane/ECS) get the bouton affinity zeroed *before* watershed, breaking cross-membrane merges. A bouton↔neuron resolution mismatch is auto-handled (reads neuron at its own mip, upsamples; e.g. 8nm neuron vs 4nm bouton). Other knobs: `neuron_aff_threshold` (below this = membrane; **lower = less masking**, fixes over-aggressive splits), `neuron_aff_reduce` (`mean`/`min`/`first`), `dilation_iters` (membrane-constrained rounding of final instances). Boutons are **much larger than mito**, so `min_segment_size`/`seed_min_size` must be far larger than mito values. fib_b converged reference (`config_fib_b_bouton_v1.yaml`): seed 0.745, foreground 0.353, erosion_iters 0, dilation_iters 2, neuron_aff_threshold 0.3, seed_min_size 3000, min_segment_size 15000.
 - `mask.flag`, `mask.path`
 - `checkpoint.segmentation_dir`, `checkpoint.merge_dir`
 - `block.size` — `[z, y, x]` (isotropic vs anisotropic — see FIB-SEM isotropic bug memory)
 - `block.overlap` — `[z, y, x]`
+- `block.roi` — `null` for full volume, or `[z1, z2, y1, y2, x1, x2]` absolute voxel coords to segment a sub-region (output stays in the full coordinate frame, overlays on full EM). Auto-snapped to chunk (128) boundaries — required so the merge core-trimming doesn't mis-slice (non-chunk-aligned starts → negative local slice → `AlignmentError`). For a multi-block ROI, `block.size` must also be a multiple of the chunk size; for a single-block ROI set `block.size` = ROI extent.
 - `segmentation_stage.parallel`, `workers`, `metadata_dir`, `mip`
 - `segmentation_stage.thresholds` — list of waterz thresholds
 - `segmentation_stage.aff_thresholds`
