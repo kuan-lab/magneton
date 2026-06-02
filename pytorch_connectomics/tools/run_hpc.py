@@ -126,16 +126,17 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     _mj_cfg = hpc.get("mutil_jobs_configs", {}) or {}
     chunks_per_task = int(_mj_cfg.get("chunks_per_task", hpc.get("chunks_per_task", 1)))
     if precomputed_flag:
-        vol_shape_zyx, vol_offset_zyx, _ = volume_info_from_cv(_image_name, mip=0)
         # Pre-create output volume now so workers find it ready.
         _geom = _base.get("INFERENCE", {}).get("GEOMETRY", {}) or {}
         _core = int(_geom.get("CORE_SIZE", 512))
         _chunk = int(_geom.get("OUTPUT_CHUNK_SIZE", 128))
+        _mip = int(_geom.get("MIP", 0))
         _roi = _geom.get("ROI", None)
+        vol_shape_zyx, vol_offset_zyx, _ = volume_info_from_cv(_image_name, mip=_mip)
         vol_shape_zyx, vol_offset_zyx = apply_roi(
             vol_shape_zyx, vol_offset_zyx, _roi, output_chunk_size=_chunk)
         _out_planes = int(_base.get("MODEL", {}).get("OUT_PLANES", 3))
-        init_output_volume(_image_name, _output_path, mip=0,
+        init_output_volume(_image_name, _output_path, mip=_mip,
                            num_channels=_out_planes,
                            dtype="uint8", chunk_size=_chunk)
         n_blocks = block_count(vol_shape_zyx, core_size=_core)

@@ -19,8 +19,11 @@ def init_output_volume(
     encoding: str = "raw",
     compress: bool = False,
 ) -> CloudVolume:
+    # `mip` selects the scale to read from the *input* pyramid. The output is
+    # freshly created as a single-scale precomputed (scales[0] = input's chosen
+    # mip), so we always open the output at mip=0.
     try:
-        out_vol = CloudVolume(output_url, mip=mip, progress=False)
+        out_vol = CloudVolume(output_url, mip=0, progress=False)
         print(f"[INFO] Output volume already exists at {output_url} — reusing")
         return out_vol
     except Exception:

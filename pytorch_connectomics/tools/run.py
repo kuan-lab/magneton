@@ -150,17 +150,20 @@ def _run_precomputed(args, cfg, device, mode):
     core_size = int(geom.CORE_SIZE)
     halo = int(geom.HALO)
     chunk_size = int(geom.OUTPUT_CHUNK_SIZE)
+    mip = int(geom.MIP)
 
-    vol_shape_zyx, vol_offset_zyx, _ = volume_info_from_cv(input_url, mip=0)
+    vol_shape_zyx, vol_offset_zyx, _ = volume_info_from_cv(input_url, mip=mip)
     roi = list(geom.ROI) if geom.ROI is not None else None
     vol_shape_zyx, vol_offset_zyx = apply_roi(
         vol_shape_zyx, vol_offset_zyx, roi, output_chunk_size=chunk_size)
-    init_output_volume(input_url, output_url, mip=0,
+    init_output_volume(input_url, output_url, mip=mip,
                        num_channels=int(cfg.MODEL.OUT_PLANES),
                        dtype="uint8", chunk_size=chunk_size)
 
-    in_cv = CloudVolume(input_url, mip=0, bounded=False, fill_missing=True,
+    in_cv = CloudVolume(input_url, mip=mip, bounded=False, fill_missing=True,
                         progress=False)
+    # Output is a freshly created single-scale precomputed (scales[0] = input's
+    # `mip`), so always open it at mip=0.
     # compress=False matches init_output_volume so chunks land as raw bytes
     # (no gzip wrapping) — required for Neuroglancer to decode them per the
     # `encoding: raw` declaration in the info file.

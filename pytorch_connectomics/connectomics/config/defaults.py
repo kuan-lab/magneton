@@ -529,6 +529,11 @@ _C.INFERENCE.GEOMETRY = CN()
 _C.INFERENCE.GEOMETRY.CORE_SIZE = 512
 _C.INFERENCE.GEOMETRY.HALO = 32
 _C.INFERENCE.GEOMETRY.OUTPUT_CHUNK_SIZE = 128
+# Mip level to read/write. 0 = highest resolution (default). Use a higher
+# mip when the model was trained at a downsampled resolution that already
+# exists in the input pyramid (e.g. neuron model trained at 8nm reading
+# from a 4nm-base precomputed: set MIP=1 to read the 8nm scale).
+_C.INFERENCE.GEOMETRY.MIP = 0
 # Optional ROI to process. Flat 6-int list [z1, z2, y1, y2, x1, x2] in
 # absolute voxel coords (matching the input precomputed's voxel_offset).
 # None = whole volume. ROI bounds are snapped to chunk boundaries so
