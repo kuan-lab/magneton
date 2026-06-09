@@ -66,7 +66,7 @@ def _run_instance(cfg_path: str, rng: str | None, task_id: int):
 def _run_instance_hpc(cfg_path: str, dry_run: bool):
     from magneton.analysis.stages.instance_features_hpc import submit
     cfg = load_config(cfg_path)
-    submit(cfg, dry_run=dry_run)
+    submit(cfg, cfg_path=cfg_path, dry_run=dry_run)
 
 
 def _run_reduce(cfg_path: str):
@@ -81,13 +81,30 @@ def _run_cluster(cfg_path: str):
     cluster(cfg)
 
 
+def _run_discover_hpc(cfg_path: str, dry_run: bool):
+    """Submit the discover stage as a big-mem SLURM job (for mip-1/mip-0 where
+    read_full+find_objects won't fit on login)."""
+    from magneton.analysis.stages.discover_bboxes_hpc import submit
+    cfg = load_config(cfg_path)
+    submit(cfg, cfg_path=cfg_path, dry_run=dry_run, chain_bc=False)
+
+
 def _run_all_hpc(cfg_path: str):
-    """Discover + submit array + queue reduce (with afterok dependency)."""
-    from magneton.analysis.stages.discover_bboxes import discover_bboxes
+    """Submit discover as a big-mem SLURM job that, on completion, chains stages
+    B+C (instance array + reduce). Runs end-to-end on the cluster — safe for
+    mip-1/mip-0 discover that can't run on login."""
+    from magneton.analysis.stages.discover_bboxes_hpc import submit
+    cfg = load_config(cfg_path)
+    submit(cfg, cfg_path=cfg_path, dry_run=False, chain_bc=True)
+
+
+def _submit_bc(cfg_path: str):
+    """Submit stage B (instance array) + queue stage C (reduce, afterok).
+    Assumes bboxes.parquet already exists. Called by the discover SLURM job
+    (chain_bc) after discover finishes, or manually."""
     from magneton.analysis.stages.instance_features_hpc import submit
     cfg = load_config(cfg_path)
-    discover_bboxes(cfg)
-    script = submit(cfg, dry_run=True)   # generate but don't sbatch yet
+    script = submit(cfg, cfg_path=cfg_path, dry_run=True)   # generate but don't sbatch yet
     if script is None:
         return
     try:
@@ -150,6 +167,10 @@ def run(args, global_cfg=None):
         _run_instance(cfg_path, getattr(args, "range", None), getattr(args, "task_id", 0))
     elif stage == "instance-hpc":
         _run_instance_hpc(cfg_path, getattr(args, "dry_run", False))
+    elif stage == "discover-hpc":
+        _run_discover_hpc(cfg_path, getattr(args, "dry_run", False))
+    elif stage == "submit-bc":
+        _submit_bc(cfg_path)
     elif stage == "reduce":
         _run_reduce(cfg_path)
     elif stage == "cluster":
@@ -162,7 +183,8 @@ def run(args, global_cfg=None):
 
 def _build_parser():
     p = argparse.ArgumentParser(prog="magneton.analysis.main", description="mito morphometrics pipeline")
-    p.add_argument("--stage", choices=["discover", "instance", "instance-hpc", "reduce", "cluster", "all-hpc"],
+    p.add_argument("--stage", choices=["discover", "discover-hpc", "instance", "instance-hpc",
+                                       "submit-bc", "reduce", "cluster", "all-hpc"],
                    required=False, help="pipeline stage to run")
     p.add_argument("--config", required=False, default=None, help="per-volume YAML config")
     p.add_argument("--range", required=False, default=None, help="row range for stage B: 'start,end'")
@@ -180,12 +202,13 @@ def _menu_table():
     t.add_column("Function", style="white")
     t.add_column("Description", style="white")
     t.add_row("1", "Discover Bboxes",                    "Read high-mip volume, find each mito's bbox")
-    t.add_row("2", "Per-Instance Features",              "Run per-mito feature math (single-process, debug)")
-    t.add_row("3", "Per-Instance Features [HPC]",        "Submit SLURM array for per-mito features")
-    t.add_row("4", "Reduce / Concat",                    "Concat task partials → morphometrics.parquet")
-    t.add_row("5", "All [HPC]",                          "Discover + submit array + queue reduce (afterok)")
-    t.add_row("6", "Embed (PCA + UMAP)",                 "Z-score features → PCA + UMAP, save embedding + plots")
-    t.add_row("7", "View Current Config",                "Print the resolved analysis config")
+    t.add_row("2", "Discover Bboxes [HPC]",              "Submit discover as a big-mem SLURM job (mip-1/0)")
+    t.add_row("3", "Per-Instance Features",              "Run per-mito feature math (single-process, debug)")
+    t.add_row("4", "Per-Instance Features [HPC]",        "Submit SLURM array for per-mito features")
+    t.add_row("5", "Reduce / Concat",                    "Concat task partials → morphometrics.parquet")
+    t.add_row("6", "All [HPC]",                          "Discover[HPC] → array → reduce, end-to-end on cluster")
+    t.add_row("7", "Embed (PCA + UMAP)",                 "Z-score features → PCA + UMAP, save embedding + plots")
+    t.add_row("8", "View Current Config",                "Print the resolved analysis config")
     t.add_row("0", "Return",                             "Back to magneton main menu")
     return t
 
@@ -193,7 +216,7 @@ def _menu_table():
 def run_interactive():
     """Rich-table interactive sub-menu, mirroring instance_segmentation.run_interactive."""
     cfg_path = _resolve_cfg_path(None)
-    choice_pool = [str(i) for i in range(8)]
+    choice_pool = [str(i) for i in range(9)]
     while True:
         console.rule("[bold bright_white]Mito Analysis Menu[/bold bright_white]", style="bold white")
         console.print(f"[white] Config:[/white] {cfg_path}")
@@ -207,7 +230,7 @@ def run_interactive():
             console.print("[yellow]Exit Mito Analysis.[/yellow]")
             break
 
-        if choice == "7":
+        if choice == "8":
             cfg = load_config(cfg_path)
             t = Table(box=box.SIMPLE, header_style="bright_white")
             t.add_column("Section"); t.add_column("Key"); t.add_column("Value")
@@ -228,8 +251,8 @@ def run_interactive():
         a.range = None
         a.task_id = 0
         a.dry_run = False
-        mapping = {"1": "discover", "2": "instance", "3": "instance-hpc",
-                   "4": "reduce", "5": "all-hpc", "6": "cluster"}
+        mapping = {"1": "discover", "2": "discover-hpc", "3": "instance", "4": "instance-hpc",
+                   "5": "reduce", "6": "all-hpc", "7": "cluster"}
         a.stage = mapping[choice]
         try:
             run(a)

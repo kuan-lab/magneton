@@ -50,15 +50,20 @@ def discover_bboxes(cfg: dict) -> str:
     slices = find_objects(vol)
     print(f"[analysis.discover] find_objects: {sum(1 for s in slices if s is not None)} bboxes in {time.time() - t0:.1f}s")
 
+    # All per-label voxel counts in ONE O(voxels) pass, instead of a per-label
+    # vol[slc]==id sum (which is O(sum of bbox volumes) and dominates runtime at
+    # fine mips — was the mip-0 bottleneck). bincount index = label value.
+    t0 = time.time()
+    counts = np.bincount(vol.reshape(-1))
+    print(f"[analysis.discover] bincount counts in {time.time() - t0:.1f}s")
+
     rows = []
     for label_minus_1, slc in enumerate(slices):
         if slc is None:
             continue
         seg_id = label_minus_1 + 1
-        # slc is a 3-tuple of slice() on the (X, Y, Z) ndarray
-        # Voxel count at mip-N for this label, computed by slicing then masking
-        sub = vol[slc]
-        count = int((sub == seg_id).sum())
+        # O(1) lookup — count at mip-N for this label
+        count = int(counts[seg_id]) if seg_id < counts.shape[0] else 0
         if count < min_count_mipN:
             continue
 

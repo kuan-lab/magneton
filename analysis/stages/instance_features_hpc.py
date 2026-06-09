@@ -80,7 +80,13 @@ def _slurm_script(cfg_path_in_root: str, job_dir: str, num_tasks: int, hpc: dict
     return script_path
 
 
-def submit(cfg: dict, dry_run: bool = False) -> str | None:
+def submit(cfg: dict, cfg_path: str = None, dry_run: bool = False) -> str | None:
+    """
+    Submit the SLURM array. `cfg_path` MUST be the same YAML path the caller
+    loaded `cfg` from — it's embedded into the generated submit_slurm.sh so
+    array tasks load the same per-volume config. Defaults to the root
+    `magneton/config.yaml` `analysis.main:` pointer only as a last resort.
+    """
     paths    = get_stage_config(cfg, "paths")
     stage    = get_stage_config(cfg, "instance")
     out_dir  = strip_file_prefix(paths["output"])
@@ -111,15 +117,20 @@ def submit(cfg: dict, dry_run: bool = False) -> str | None:
     write_manifest(manifest_path, ranges)
     print(f"[analysis.instance_hpc] wrote manifest -> {manifest_path}")
 
-    # Resolve the config path the slurm script will pass on the command line.
-    # We use the same root-config indirection as merge_apply_hpc.py.
-    global_cfgs = load_global_config_path("magneton/config.yaml")
-    cfg_path_in_root = (
-        global_cfgs.get("analysis", {})
-        .get("main", "magneton/analysis/configs/config.yaml")
-    )
+    # Use the actual config path the caller passed via --config; fall back to
+    # the root config's analysis.main pointer only if not provided. This is
+    # the fix for the 2026-05-28 bug where two volumes' arrays both got the
+    # root pointer baked in and trampled each other's output.
+    if cfg_path:
+        cfg_path_for_script = cfg_path
+    else:
+        global_cfgs = load_global_config_path("magneton/config.yaml")
+        cfg_path_for_script = (
+            global_cfgs.get("analysis", {})
+            .get("main", "magneton/analysis/configs/config.yaml")
+        )
 
-    script = _slurm_script(cfg_path_in_root, job_dir, len(ranges), hpc)
+    script = _slurm_script(cfg_path_for_script, job_dir, len(ranges), hpc)
     print(f"[analysis.instance_hpc] generated -> {script}")
     print(f"[analysis.instance_hpc] submit command: sbatch {script}")
     if dry_run:
@@ -140,7 +151,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
     cfg = load_config(args.config)
-    submit(cfg, dry_run=args.dry_run)
+    submit(cfg, cfg_path=args.config, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":
