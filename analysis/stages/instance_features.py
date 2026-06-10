@@ -56,6 +56,10 @@ def process_range(cfg: dict, start: int, end: int, task_id: int) -> str:
                 int(r.bbox_z0), int(r.bbox_z1))
         crop = read_bbox(in_pc, bbox, mip=0)
         mask = (crop == seg_id)
+        # Free the uint32 crop immediately — for huge sparse objects (e.g. long
+        # mitochondrial networks) it's tens of GB and is not needed past masking.
+        # Only the bool mask + sparse argwhere coords drive the feature math.
+        del crop
         if not mask.any():
             print(f"[analysis.instance] WARN seg_id {seg_id} mask empty inside bbox; skipping")
             continue

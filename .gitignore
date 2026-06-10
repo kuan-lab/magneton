@@ -47,5 +47,8 @@ create_presentation.py
 # Lab notebooks
 lab_notebook/
 
+# Generated reports
+reports/
+
 # External projects
 marmoset_project/

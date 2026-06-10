@@ -98,6 +98,20 @@ def _run_all_hpc(cfg_path: str):
     submit(cfg, cfg_path=cfg_path, dry_run=False, chain_bc=True)
 
 
+def _run_match(cfg_path: str):
+    """Relational stage 1 — match instances across volumes (uses a relational config)."""
+    from magneton.analysis.stages.match_stage import run_matching
+    cfg = load_config(cfg_path)
+    run_matching(cfg)
+
+
+def _run_relational(cfg_path: str):
+    """Relational stage 2 — stats + plots from the match tables + morphometrics."""
+    from magneton.analysis.stages.relational import relational
+    cfg = load_config(cfg_path)
+    relational(cfg)
+
+
 def _submit_bc(cfg_path: str):
     """Submit stage B (instance array) + queue stage C (reduce, afterok).
     Assumes bboxes.parquet already exists. Called by the discover SLURM job
@@ -177,6 +191,13 @@ def run(args, global_cfg=None):
         _run_cluster(cfg_path)
     elif stage == "all-hpc":
         _run_all_hpc(cfg_path)
+    elif stage == "match":
+        _run_match(cfg_path)
+    elif stage == "relational":
+        _run_relational(cfg_path)
+    elif stage == "relational-all":
+        _run_match(cfg_path)
+        _run_relational(cfg_path)
     else:
         raise SystemExit(f"unknown stage: {stage}")
 
@@ -184,7 +205,8 @@ def run(args, global_cfg=None):
 def _build_parser():
     p = argparse.ArgumentParser(prog="magneton.analysis.main", description="mito morphometrics pipeline")
     p.add_argument("--stage", choices=["discover", "discover-hpc", "instance", "instance-hpc",
-                                       "submit-bc", "reduce", "cluster", "all-hpc"],
+                                       "submit-bc", "reduce", "cluster", "all-hpc",
+                                       "match", "relational", "relational-all"],
                    required=False, help="pipeline stage to run")
     p.add_argument("--config", required=False, default=None, help="per-volume YAML config")
     p.add_argument("--range", required=False, default=None, help="row range for stage B: 'start,end'")
@@ -208,7 +230,8 @@ def _menu_table():
     t.add_row("5", "Reduce / Concat",                    "Concat task partials → morphometrics.parquet")
     t.add_row("6", "All [HPC]",                          "Discover[HPC] → array → reduce, end-to-end on cluster")
     t.add_row("7", "Embed (PCA + UMAP)",                 "Z-score features → PCA + UMAP, save embedding + plots")
-    t.add_row("8", "View Current Config",                "Print the resolved analysis config")
+    t.add_row("8", "Relational (cross-volume)",          "Match mito/synapse → bouton, then relational stats + plots (relational config)")
+    t.add_row("9", "View Current Config",                "Print the resolved analysis config")
     t.add_row("0", "Return",                             "Back to magneton main menu")
     return t
 
@@ -216,7 +239,7 @@ def _menu_table():
 def run_interactive():
     """Rich-table interactive sub-menu, mirroring instance_segmentation.run_interactive."""
     cfg_path = _resolve_cfg_path(None)
-    choice_pool = [str(i) for i in range(9)]
+    choice_pool = [str(i) for i in range(10)]
     while True:
         console.rule("[bold bright_white]Mito Analysis Menu[/bold bright_white]", style="bold white")
         console.print(f"[white] Config:[/white] {cfg_path}")
@@ -230,7 +253,7 @@ def run_interactive():
             console.print("[yellow]Exit Mito Analysis.[/yellow]")
             break
 
-        if choice == "8":
+        if choice == "9":
             cfg = load_config(cfg_path)
             t = Table(box=box.SIMPLE, header_style="bright_white")
             t.add_column("Section"); t.add_column("Key"); t.add_column("Value")
@@ -252,7 +275,7 @@ def run_interactive():
         a.task_id = 0
         a.dry_run = False
         mapping = {"1": "discover", "2": "discover-hpc", "3": "instance", "4": "instance-hpc",
-                   "5": "reduce", "6": "all-hpc", "7": "cluster"}
+                   "5": "reduce", "6": "all-hpc", "7": "cluster", "8": "relational-all"}
         a.stage = mapping[choice]
         try:
             run(a)
