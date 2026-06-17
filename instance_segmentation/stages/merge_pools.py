@@ -172,7 +172,7 @@ def build_id_pools_parallel(global_cfg, stage_cfg, restart=False):
     - Write union pairs to merge_ckpt_dir/unions.txt (each line: “<a> <b>”),
         and write merge_ckpt_dir/global_offsets.json
     """
-    metadata_dir   = stage_cfg.get("metadata_dir", "./local_metadata")
+    metadata_dir   = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
     merge_ckpt_dir = global_cfg["checkpoint"]["merge_dir"]
 
     # Thresholds Package

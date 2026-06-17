@@ -25,7 +25,8 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 | `mask_prec` | `mask_prec` |
 | `mask_tif` | `mask_tif` |
 | `mesh`, `meshing` | `mesh` |
-| `analysis`, `morphometrics`, `mito features`, `mito analysis` | `analysis_*` |
+| `analysis`, `morphometrics`, `mito features` | `analysis_*` |
+| `proofreading`, `skeletonize`, `expand`, `nninteractive` | `proofreading_expand` |
 
 Note: `jobs/merge/` is the *toolkit* merge-volumes tool. `jobs/merge_*/` suffixed dirs are almost always *instance_segmentation* merge stage (from `merge_stage.hpc.job_dir` in the instance seg config). The keyword "merge" alone is ambiguous — infer from context (if the user is talking about segmentation/waterz flow, it's instance seg merge; if they just converted a volume, it's toolkit merge).
 
@@ -120,7 +121,7 @@ Report findings:
 
 1. Read `jobs/<suffix>/submit_slurm.sh` and grep for `--config` to find the config file path used.
 2. Read that config to resolve output path(s). Stage-specific keys:
-   - **instance_segmentation**: `paths.output` (global), `paths.output_local_base` (per-block), `checkpoint.segmentation_dir`, `seg_metadata_*/`
+   - **instance_segmentation**: `paths.output` (global), `paths.output_local_base` (per-block), `checkpoint.segmentation_dir`, `metadata/seg_metadata_*/` (metadata dirs live under `magneton/metadata/`)
    - **pytc**: `INFERENCE.OUTPUT_PATH` + `INFERENCE.OUTPUT_NAME` (the h5 file) or precomputed dir
    - **toolkit prec/convert**: `paths.output`
    - **toolkit split**: `split.output`
@@ -128,6 +129,7 @@ Report findings:
    - **toolkit downsample**: `downsample.source_path` — mip levels written in place
    - **toolkit crop**: `crop.output`
    - **instance_segmentation merge_stage**: `paths.output`, `checkpoint.merge_dir`
+   - **proofreading**: `paths.output` (`skeletons.nml` for skeletonize; `expanded.tif` for expand). NOTE: big outputs are on shared storage `/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/<volume>/`, not home — the expand stage runs in the `nninteractive` prefix env on a GPU node.
 3. Strip any `file://` prefix and check the path:
    - Exists?
    - Non-empty (file size > 0, or directory has entries)?

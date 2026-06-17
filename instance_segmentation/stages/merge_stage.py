@@ -25,7 +25,7 @@ def merge_local_blocks(global_cfg, stage_cfg,
     output_path = global_cfg["paths"]["output"]
     merge_ckpt_dir = global_cfg["checkpoint"]["merge_dir"]
 
-    metadata_dir    = stage_cfg.get("metadata_dir", "./local_metadata")
+    metadata_dir    = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
     # min_overlap_vox = stage_cfg.get("min_overlap_vox", 20)
     # min_frac_local  = stage_cfg.get("min_frac_local", 0.7)
     # min_frac_global = stage_cfg.get("min_frac_global", 0.7)

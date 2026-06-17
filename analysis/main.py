@@ -3,9 +3,9 @@
 """
 analysis module — argparse CLI + interactive (Rich) menu.
 
-Per-instance mito morphometrics pipeline:
-  Stage A  discover       Read high-mip volume, find each mito's bbox.
-  Stage B  instance       Per-mito feature math (single-process; debug).
+Per-instance morphometrics pipeline (mito, bouton, synapse, ...):
+  Stage A  discover       Read high-mip volume, find each instance's bbox.
+  Stage B  instance       Per-instance feature math (single-process; debug).
   Stage B' instance-hpc   Submit SLURM array for Stage B.
   Stage C  reduce         Concat task shards into morphometrics.parquet.
   all-hpc                 Run discover + submit array + queue reduce.
@@ -203,7 +203,7 @@ def run(args, global_cfg=None):
 
 
 def _build_parser():
-    p = argparse.ArgumentParser(prog="magneton.analysis.main", description="mito morphometrics pipeline")
+    p = argparse.ArgumentParser(prog="magneton.analysis.main", description="per-instance morphometrics pipeline")
     p.add_argument("--stage", choices=["discover", "discover-hpc", "instance", "instance-hpc",
                                        "submit-bc", "reduce", "cluster", "all-hpc",
                                        "match", "relational", "relational-all"],
@@ -223,10 +223,10 @@ def _menu_table():
     t.add_column("Option", justify="center", style="white")
     t.add_column("Function", style="white")
     t.add_column("Description", style="white")
-    t.add_row("1", "Discover Bboxes",                    "Read high-mip volume, find each mito's bbox")
+    t.add_row("1", "Discover Bboxes",                    "Read high-mip volume, find each instance's bbox")
     t.add_row("2", "Discover Bboxes [HPC]",              "Submit discover as a big-mem SLURM job (mip-1/0)")
-    t.add_row("3", "Per-Instance Features",              "Run per-mito feature math (single-process, debug)")
-    t.add_row("4", "Per-Instance Features [HPC]",        "Submit SLURM array for per-mito features")
+    t.add_row("3", "Per-Instance Features",              "Run per-instance feature math (single-process, debug)")
+    t.add_row("4", "Per-Instance Features [HPC]",        "Submit SLURM array for per-instance features")
     t.add_row("5", "Reduce / Concat",                    "Concat task partials → morphometrics.parquet")
     t.add_row("6", "All [HPC]",                          "Discover[HPC] → array → reduce, end-to-end on cluster")
     t.add_row("7", "Embed (PCA + UMAP)",                 "Z-score features → PCA + UMAP, save embedding + plots")
@@ -241,7 +241,7 @@ def run_interactive():
     cfg_path = _resolve_cfg_path(None)
     choice_pool = [str(i) for i in range(10)]
     while True:
-        console.rule("[bold bright_white]Mito Analysis Menu[/bold bright_white]", style="bold white")
+        console.rule("[bold bright_white]Analysis Menu[/bold bright_white]", style="bold white")
         console.print(f"[white] Config:[/white] {cfg_path}")
         console.print(_menu_table())
         choice = Prompt.ask("[bright_white]> Select stage[/bright_white]", default="0").strip()
@@ -250,7 +250,7 @@ def run_interactive():
             continue
 
         if choice == "0":
-            console.print("[yellow]Exit Mito Analysis.[/yellow]")
+            console.print("[yellow]Exit Analysis.[/yellow]")
             break
 
         if choice == "9":

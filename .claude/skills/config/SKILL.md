@@ -41,6 +41,22 @@ This is the **authoritative static registry**. If a new pipeline function/stage/
 
 Note: one instance_segmentation config file holds **both** the segmentation stage and the merge stage (two top-level sections: `segmentation_stage` and `merge_stage`). They are not separate files.
 
+### Analysis (per-instance morphometrics)
+
+| Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
+|---|---|---|---|
+| `analysis` / `morphometrics` / `mito features` / `bouton features` / `discover` | `analysis/configs/` | per-volume: `config_fib_b_mito.yaml`, `config_fib_b_mito_lucchi_v1.yaml`, `config_fib_b_bouton_v1.yaml`, `config_fib_b_synapse_v3.yaml`; relational (cross-volume, different shape): `config_fib_b_relational.yaml` | `analysis.main` |
+
+Note: organelle-agnostic (mito, bouton, synapse, …) — the same per-instance bbox-driven pipeline. Relational configs have a different shape (a `volumes:` list), used for cross-volume matching.
+
+### Proofreading (skeleton-driven GT correction)
+
+| Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
+|---|---|---|---|
+| `proofreading` / `skeletonize` / `expand` / `nninteractive` | `proofreading/configs/` | `config_fib_b_neuron_fennel.yaml` | `proofreading.main` |
+
+Note: one file holds both the `skeletonize_stage` (runs in the `magneton` env) and `expand_stage` (runs in the `nninteractive` prefix env on GPU). The validated use is skeletonize→WebKnossos-correct; nnInteractive EM expansion is shelved (floods across membranes — see `project_skeleton_nninteractive_workflow` memory).
+
 ## Stage-specific fields to ask about
 
 When generating a config, walk the fields below for the chosen stage. Fields already given in the user's English command should be filled in automatically; missing ones must be asked about.
@@ -167,18 +183,36 @@ The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a h
 - `block.size` — `[z, y, x]` (isotropic vs anisotropic — see FIB-SEM isotropic bug memory)
 - `block.overlap` — `[z, y, x]`
 - `block.roi` — `null` for full volume, or `[z1, z2, y1, y2, x1, x2]` absolute voxel coords to segment a sub-region (output stays in the full coordinate frame, overlays on full EM). Auto-snapped to chunk (128) boundaries — required so the merge core-trimming doesn't mis-slice (non-chunk-aligned starts → negative local slice → `AlignmentError`). For a multi-block ROI, `block.size` must also be a multiple of the chunk size; for a single-block ROI set `block.size` = ROI extent.
-- `segmentation_stage.parallel`, `workers`, `metadata_dir`, `mip`
+- `segmentation_stage.parallel`, `workers`, `metadata_dir` (block-JSON dir — put it under `magneton/metadata/seg_metadata_<volume>`, NOT top-level; default if unset is `./metadata/local_metadata`), `mip`
 - `segmentation_stage.thresholds` — list of waterz thresholds
 - `segmentation_stage.aff_thresholds`
 - `segmentation_stage.supervoxel` — `3d` (isotropic) or `2d` (serial section)
 - `segmentation_stage.interior_threshold`, `min_distance` (3D supervoxel only)
 - `segmentation_stage.method`, `merge_function` (2D supervoxel only)
 - `segmentation_stage.hpc.*` + `blocks_per_job`, `workers_per_job`, `hpc_num`
-- `merge_stage.metadata_dir`, `workers`, `mip`
+- `merge_stage.metadata_dir` (same `magneton/metadata/seg_metadata_<volume>` dir as segmentation_stage), `workers`, `mip`
 - `merge_stage.min_overlap_vox`, `min_frac_local`, `min_frac_global`, `max_voxel_size`
 - `merge_stage.require_recip`, `allow_union_amb`, `dom_ratio`, `min_iou`
 - `merge_stage.export_tif.enable`, `path`, `max_slices`
 - `merge_stage.hpc.*` + `blocks_per_job`, `workers_per_job`
+
+### analysis (per-instance morphometrics)
+- `paths.input` — high-mip instance precomputed volume (`file://...`)
+- `paths.mip` — discovery mip (mito → `2`/16nm; bouton/synapse → `1`/8nm, smaller objects need finer mip to avoid downsample dropout)
+- `paths.output` — work dir (`bboxes.parquet`, `morphometrics.parquet`)
+- `bbox_halo_mipN` — pad ± voxels at the discovery mip (compensates downsample rounding)
+- `min_voxel_count_mipN`
+- `features.sa_method` — `face_count` / `marching_cubes` (default) / `sqrt_kernel` (paper-faithful)
+- `discover_stage.hpc.*` — big-mem single job (needed for mip-1/0 where read_full+find_objects won't fit on login; `mem` is TOTAL, e.g. `64G` at mip1, `240G` at mip0)
+- `instance_stage.hpc.*` — SLURM array (per-instance feature math)
+- **Relational config** (different shape): top-level `volumes:` list each with `pc` (precomputed) + `name`; `sample_mip`. Use `config_fib_b_relational.yaml` as the template.
+
+### proofreading (skeleton-driven GT correction)
+- `paths.seg` — instance seg to skeletonize (tif or `file://` precomputed)
+- `paths.em` — EM tif (the nnInteractive image, for expand)
+- `paths.output` — work dir (`skeletons.nml`, `expanded.tif`) — **put on shared storage, NOT home** (home quota is full); e.g. `/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/<volume>`
+- `skeletonize_stage`: `source` (`tif`/`precomputed`), `mip`, `res_nm`, `dust_threshold`, `parallel`, `parallel_chunk_size`, `fix_branching`, `fix_borders`; `teasar.*` (`scale`, `const`, `pdrf_exponent`, soma thresholds — the kimimaro tuning surface); `postprocess.{enable,tick_threshold,dust_threshold}`; `downsample_nodes`
+- `expand_stage`: `nml` (the CORRECTED NML from WebKnossos; `null` → uses `<output>/skeletons.nml`), `prompt` (`scribble`/`points`), `point_subsample`, `max_neurons` (0=all), `model_dir` (`null`→resolve from HF cache), `hf_cache`; `hpc.*` is a **GPU** block (`partition: gpu`, `constraint: "a100|h100|h200"`, `gpus`, `mem_per_gpu`, `env` = the `nninteractive` prefix env path, `hf_cache`)
 
 ### Standard HPC block (all stages)
 - `hpc.enable`

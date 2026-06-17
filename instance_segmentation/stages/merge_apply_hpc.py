@@ -21,7 +21,7 @@ def _count_done_blocks(global_cfg, stage_cfg):
     merge_apply iterates the same set, so this gives the SLURM array size
     when divided by blocks_per_job.
     """
-    metadata_dir = stage_cfg.get("metadata_dir", "./local_metadata")
+    metadata_dir = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
     index_data = load_index_meta(metadata_dir)
     blocks_meta = [b for b in index_data.get("blocks", []) if b.get("done", False)]
     return len(blocks_meta)

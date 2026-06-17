@@ -20,10 +20,14 @@ magneton/
 │   ├── tools/                   # run_local_shard.py, etc.
 │   ├── waterz_block.py          # Neuron mode: waterz agglomeration
 │   └── mito_block.py            # Mito mode: binary_watershed
-├── analysis/                    # Per-instance morphometrics pipeline (mito features, future bouton/PSD)
+├── analysis/                    # Per-instance morphometrics pipeline (mito, bouton, synapse — any sparse organelle)
 │   ├── configs/                 # Per-volume YAML configs
 │   ├── stages/                  # discover_bboxes, instance_features (+HPC), reduce_features
 │   └── lib/                     # features (PC math, hull, symmetry), surface_area (3 methods), plane_sampling, precomputed_io
+├── proofreading/                # Skeleton-driven proofreading / ground-truth bootstrapping
+│   ├── configs/                 # Per-volume YAML configs
+│   ├── stages/                  # skeletonize (kimimaro→NML), expand (nnInteractive), expand_hpc
+│   └── lib/                     # skeleton_io (kimimaro skeletonize, NML read/write)
 ├── jobs/                        # SLURM job scripts and logs
 │   ├── pytc/                    # PyTC inference jobs
 │   ├── merge/                   # Merge stage jobs
@@ -42,7 +46,8 @@ magneton/
    - `mito`: binary_watershed (sparse objects, respects background)
 4. **Merge** (`instance_segmentation/stages/merge_*`) - Stitch block-level segments into global IDs
 5. **Downsample** (`toolkit/tools/downsample_prec.py`) - Generate mip levels via igneous
-6. **Analysis** (`analysis/`) - Per-instance morphometrics: read high-mip volume → `find_objects` for bbox manifest → crop+features per mito (SLURM array) → concat to `morphometrics.parquet`. 19 features per mito (volume, surface area, sphericity, hull, max diameter, plus PC{length, inertia, symmetry, cross-section area, cross-section perimeter} for each of 3 PC axes). SA method selectable: `face_count`, `marching_cubes` (default), or paper-faithful `sqrt_kernel`.
+6. **Analysis** (`analysis/`) - Per-instance morphometrics for any sparse organelle (mito, bouton, synapse): read high-mip volume → `find_objects` for bbox manifest → crop+features per instance (SLURM array) → concat to `morphometrics.parquet`. 19 features per instance (volume, surface area, sphericity, hull, max diameter, plus PC{length, inertia, symmetry, cross-section area, cross-section perimeter} for each of 3 PC axes). SA method selectable: `face_count`, `marching_cubes` (default), or paper-faithful `sqrt_kernel`.
+7. **Proofreading** (`proofreading/`) - Skeleton-driven GT/proofreading loop: skeletonize instance segments → NML (kimimaro) → correct skeletons in WebKnossos → expand corrected skeletons into dense segments (nnInteractive). Skeletonize runs in the `magneton` env; expand runs in a separate `nninteractive` env on GPU.
 
 ## Key Conventions
 
@@ -50,6 +55,7 @@ magneton/
 - **HPC**: All heavy computation runs on SLURM. Configs have `hpc:` sections with partition, mem, time, etc.
 - **YAML gotcha**: YAML 1.1 interprets unquoted `HH:MM:SS` as sexagesimal integers (e.g., `10:00:00` → `36000`). Always quote time strings or rely on `_fix_yaml_time()` in `pytorch_connectomics/main.py`.
 - **SLURM memory**: `SLURM_MEM_PER_CPU` is always a plain number in MB (no unit suffix). Code in `downsample_prec.py` appends `'M'` before parsing.
+- **Segmentation metadata**: per-volume block-JSON metadata dirs live under `metadata/` (e.g. `magneton/metadata/seg_metadata_<volume>`), set via `metadata_dir:` in each instance-seg config. Default if unset: `./metadata/local_metadata`. The whole `metadata/` dir is gitignored.
 - **Session logs**: Written to `claude_notes/log_MM_DD_YYYY.md` after each session. Record only code/script changes, not manual file operations.
 
 ## Common Commands

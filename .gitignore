@@ -10,6 +10,7 @@ toolkit/configs/
 instance_segmentation/configs/
 pytorch_connectomics/configs/*
 analysis/configs/
+proofreading/configs/
 
 # Analysis run outputs
 analysis/output/
@@ -26,7 +27,7 @@ scratch/
 checkpoints/
 
 # Segmentation metadata (block JSONs)
-seg_metadata_*/
+metadata/
 
 # Igneous task state
 igneous_tasks/

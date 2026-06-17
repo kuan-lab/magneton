@@ -30,7 +30,7 @@ def segmentation_blocks(global_cfg, stage_cfg, restart=False):
     overlap     = tuple(global_cfg["block"]["overlap"])
 
     local_ckpt_dir = global_cfg["checkpoint"]["segmentation_dir"]
-    metadata_dir   = stage_cfg.get("metadata_dir", "./local_metadata")
+    metadata_dir   = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
     mip            = stage_cfg.get("mip", 0)
 
     # Mode configuration (neuron vs mito)
@@ -290,7 +290,7 @@ def segmentation_blocks_parallel(global_cfg, stage_cfg, restart=False):
     overlap = tuple(global_cfg["block"]["overlap"])
 
     local_ckpt_dir = global_cfg["checkpoint"]["segmentation_dir"]
-    metadata_dir = stage_cfg.get("metadata_dir", "./local_metadata")
+    metadata_dir = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
     mip = stage_cfg.get("mip", 0)
     workers = int(stage_cfg.get("workers", os.cpu_count() or 1))
 

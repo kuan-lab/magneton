@@ -119,7 +119,7 @@ def apply_pools_to_global(global_cfg, stage_cfg, task_id=None, blocks_per_task=N
     output_path    = global_cfg["paths"]["output"]
     merge_ckpt_dir = global_cfg["checkpoint"]["merge_dir"]
 
-    metadata_dir   = stage_cfg.get("metadata_dir", "./local_metadata")
+    metadata_dir   = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
     mip            = stage_cfg.get("mip", 0)
 
     export_cfg         = stage_cfg.get("export_tif", {})

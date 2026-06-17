@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 analysis package initializer.
-Mito morphometrics pipeline (per-instance bbox-driven architecture).
+Per-instance morphometrics pipeline (mito, bouton, synapse, ...; bbox-driven architecture).
 """
 from .main import run, run_interactive
 
