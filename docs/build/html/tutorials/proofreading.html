@@ -1,0 +1,246 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proofreading &mdash; Magneton 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="prev" title="Analysis" href="analysis.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2a4d69" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Magneton
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-5-main-modules">Magneton consists of 5 main modules:</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/conda.html">Virtual Environment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#download-miniconda-or-anaconda">Download Miniconda or Anaconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#run-the-installer">Run the Installer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#follow-the-installation-prompts">Follow the Installation Prompts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#activate-conda">Activate Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#verify-installation">Verify Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/magneton.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#create-a-virtual-environment">Create a Virtual Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#install-magneton">Install Magneton</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-all-modules">Install All Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-affinity-maps-inference-module">Install Affinity Maps Inference Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-waterz">Install Waterz</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="toolkit.html">Processing Toolkit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="toolkit.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="toolkit.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="toolkit.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="toolkit.html#data-preprocessing-and-postprocessing">Data preprocessing and postprocessing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="aff.html">Affinity Map Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="aff.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aff.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-pretraining">Model pretraining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-fine-tuning">Model fine-tuning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-inference">Model inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ins.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#segmentation-modes">Segmentation modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#status">Status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#discover-bboxes">Discover Bboxes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#per-instance-features">Per-Instance Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#reduce-concat">Reduce / Concat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#all-hpc">All [HPC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#embed-pca-umap">Embed (PCA + UMAP)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#relational-cross-volume">Relational (cross-volume)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Proofreading</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#view-current-config">View Current Config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#membrane-webknossos">Membrane → WebKnossos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#skeletonize">Skeletonize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#expand-nninteractive-not-functional">Expand (nnInteractive) — not functional</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2a4d69" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Magneton</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Proofreading</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/proofreading.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="proofreading">
+<h1>Proofreading<a class="headerlink" href="#proofreading" title="Link to this heading"></a></h1>
+<p>This tutorial provides step-by-step guidance for the proofreading / ground-truth bootstrapping module.</p>
+<blockquote>
+<div><p>Human-in-the-loop: correction happens in <a class="reference external" href="https://webknossos.org/">WebKnossos</a>, then the corrected result is fed back into the pipeline.</p>
+</div></blockquote>
+<p>The idea is to let a human edit a <strong>cheap representation</strong> of a segmentation and regenerate the dense labels, giving a faster ground-truth / proofreading cycle. Two entries are provided:</p>
+<ul class="simple">
+<li><p><strong>Membrane</strong> <em>(recommended)</em> — crop EM + affinity inference from precomputed, threshold the affinity to a binary membrane, and upload EM + membrane to WebKnossos in one command. The membrane is then corrected directly in the WebKnossos volume tool.</p></li>
+<li><p><strong>Skeletonize</strong> — skeletonize an instance segmentation into a WebKnossos NML (with <code class="docutils literal notranslate"><span class="pre">kimimaro</span></code>) for skeleton-level correction.</p></li>
+</ul>
+<blockquote>
+<div><p>The skeleton → <strong>nnInteractive expand</strong> path (regenerating dense masks from corrected skeletons) is <strong>not functional</strong>: nnInteractive was trained on CT/MRI and light microscopy and floods across EM membranes. The skeletonize → WebKnossos-correct half is kept; for dense correction use the membrane entry.</p>
+</div></blockquote>
+<section id="main-menu">
+<h2>Main Menu<a class="headerlink" href="#main-menu" title="Link to this heading"></a></h2>
+<p>Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">magneton</span></code> to start the CLI.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">5</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, enter the <strong>Proofreading module</strong>.</p>
+</section>
+<section id="options">
+<h2>Options<a class="headerlink" href="#options" title="Link to this heading"></a></h2>
+<section id="view-current-config">
+<h3>View Current Config<a class="headerlink" href="#view-current-config" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">9</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, view the current <strong>proofreading configuration</strong> (resolved from the <code class="docutils literal notranslate"><span class="pre">proofreading.main</span></code> config in the global configuration file). A single config file holds all stages as top-level sections (<code class="docutils literal notranslate"><span class="pre">membrane_stage</span></code>, <code class="docutils literal notranslate"><span class="pre">skeletonize_stage</span></code>, <code class="docutils literal notranslate"><span class="pre">expand_stage</span></code>).</p>
+</section>
+<section id="membrane-webknossos">
+<h3>Membrane → WebKnossos<a class="headerlink" href="#membrane-webknossos" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">4</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code> to run the membrane stage. It:</p>
+<ol class="arabic simple">
+<li><p>Crops the affinity <strong>inference</strong> and <strong>EM</strong> from precomputed at the configured ROI. The two are read at mips that resolve to the same resolution (inference at its 8 nm mip0; the 4 nm EM source at mip1 = 8 nm).</p></li>
+<li><p>Converts the affinity to a binary membrane: <code class="docutils literal notranslate"><span class="pre">membrane</span> <span class="pre">=</span> <span class="pre">reduce_over_channels(aff)</span> <span class="pre">&lt;</span> <span class="pre">threshold</span></code> (default <code class="docutils literal notranslate"><span class="pre">min</span></code> across channels, threshold <code class="docutils literal notranslate"><span class="pre">140</span></code>). Membrane voxels become foreground, cytoplasm stays background.</p></li>
+<li><p>Writes <code class="docutils literal notranslate"><span class="pre">em.tif</span></code> + <code class="docutils literal notranslate"><span class="pre">membrane.tif</span></code> to the output dir and uploads both to WebKnossos (EM as a color layer, membrane as the segmentation annotation layer) for correction.</p></li>
+</ol>
+<p>Key config fields (under <code class="docutils literal notranslate"><span class="pre">membrane_stage</span></code>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">coords</span></code>: ROI as <code class="docutils literal notranslate"><span class="pre">[z1,</span> <span class="pre">z2,</span> <span class="pre">y1,</span> <span class="pre">y2,</span> <span class="pre">x1,</span> <span class="pre">x2]</span></code> in the common (post-mip, 8 nm) voxel space.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">inference.path</span></code> / <code class="docutils literal notranslate"><span class="pre">inference.mip</span></code> / <code class="docutils literal notranslate"><span class="pre">channel_reduce</span></code> / <code class="docutils literal notranslate"><span class="pre">threshold</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">em.path</span></code> / <code class="docutils literal notranslate"><span class="pre">em.mip</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">upload.enable</span></code> (set <code class="docutils literal notranslate"><span class="pre">false</span></code> to only write the TIFs and upload later), <code class="docutils literal notranslate"><span class="pre">upload.remote_folder</span></code> (a WebKnossos folder path, id, or dashboard URL), <code class="docutils literal notranslate"><span class="pre">upload.out_dir</span></code> (local wkw scratch dir), <code class="docutils literal notranslate"><span class="pre">upload.cleanup</span></code>.</p></li>
+</ul>
+<blockquote>
+<div><p>The crop + threshold run in the <code class="docutils literal notranslate"><span class="pre">magneton</span></code> env; the upload runs in the <code class="docutils literal notranslate"><span class="pre">yf354</span></code> env (which has webknossos-libs). A WebKnossos auth token is read from the <code class="docutils literal notranslate"><span class="pre">WEBKNOSSOS_TOKEN</span></code> environment variable. The whole step is light enough to run interactively — no HPC needed.</p>
+</div></blockquote>
+</section>
+<section id="skeletonize">
+<h3>Skeletonize<a class="headerlink" href="#skeletonize" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code> to skeletonize the instance segmentation (<code class="docutils literal notranslate"><span class="pre">paths.seg</span></code>) into <code class="docutils literal notranslate"><span class="pre">skeletons.nml</span></code> with <code class="docutils literal notranslate"><span class="pre">kimimaro</span></code>. Upload it to WebKnossos for skeleton-level correction. The TEASAR parameters under <code class="docutils literal notranslate"><span class="pre">skeletonize_stage.teasar</span></code> are the main tuning surface.</p>
+</section>
+<section id="expand-nninteractive-not-functional">
+<h3>Expand (nnInteractive) — not functional<a class="headerlink" href="#expand-nninteractive-not-functional" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">2</span></code> (local) / <code class="docutils literal notranslate"><span class="pre">3</span></code> (HPC) would expand a corrected NML into dense segments via nnInteractive. <strong>This path does not work on EM</strong> (see the note above) and is retained only for reference; use the membrane entry instead.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="analysis.html" class="btn btn-neutral float-left" title="Analysis" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, zhen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

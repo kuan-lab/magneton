@@ -7,15 +7,15 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>About &mdash; Magneton 1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=92fd9be5" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="_static/documentation_options.js?v=f2a433a1"></script>
-      <script src="_static/doctools.js?v=9a2dae69"></script>
-      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="author" title="About these documents" href="#" />
@@ -47,7 +47,7 @@
               <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">About</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#magneton-consists-of-3-main-modules">Magneton consists of 3 main modules:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#magneton-consists-of-5-main-modules">Magneton consists of 5 main modules:</a></li>
 </ul>
 </li>
 </ul>
@@ -97,12 +97,38 @@
 <li class="toctree-l1"><a class="reference internal" href="tutorials/ins.html">Instance Segmentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/ins.html#main-menu">Main Menu</a></li>
 <li class="toctree-l2"><a class="reference internal" href="tutorials/ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#segmentation-modes">Segmentation modes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#global-configuration">Global Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#status">Status</a></li>
 <li class="toctree-l3"><a class="reference internal" href="tutorials/ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/analysis.html">Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/analysis.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/analysis.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#discover-bboxes">Discover Bboxes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#per-instance-features">Per-Instance Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#reduce-concat">Reduce / Concat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#all-hpc">All [HPC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#embed-pca-umap">Embed (PCA + UMAP)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/analysis.html#relational-cross-volume">Relational (cross-volume)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials/proofreading.html">Proofreading</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/proofreading.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials/proofreading.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/proofreading.html#view-current-config">View Current Config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/proofreading.html#membrane-webknossos">Membrane → WebKnossos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/proofreading.html#skeletonize">Skeletonize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="tutorials/proofreading.html#expand-nninteractive-not-functional">Expand (nnInteractive) — not functional</a></li>
 </ul>
 </li>
 </ul>
@@ -135,43 +161,69 @@
              
   <section id="about">
 <h1>About<a class="headerlink" href="#about" title="Link to this heading"></a></h1>
-<p><strong>Magneton</strong> is a neuron segmentation pipeline developed by <a class="reference external" href="https://www.kuanlab.org/">Kuan Lab</a>. This pipeline employs a chunked based mode for processing large-scale 3D EM data in neuron segmentation tasks. It is currently available as a CLI tool, supporting both local jobs and HPC jobs.</p>
+<p><strong>Magneton</strong> is a connectomics segmentation and analysis pipeline developed by <a class="reference external" href="https://www.kuanlab.org/">Kuan Lab</a> for neuron and organelle (mitochondria, bouton, synapse) processing of large-scale 3D EM data. It employs a chunk-based mode for processing large volumes and is available as a CLI tool, supporting both local jobs and HPC (SLURM) jobs.</p>
 <blockquote>
 <div><p>Based on Linux machines with NVIDIA GPUs</p>
 </div></blockquote>
-<section id="magneton-consists-of-3-main-modules">
-<h2>Magneton consists of 3 main modules:<a class="headerlink" href="#magneton-consists-of-3-main-modules" title="Link to this heading"></a></h2>
+<section id="magneton-consists-of-5-main-modules">
+<h2>Magneton consists of 5 main modules:<a class="headerlink" href="#magneton-consists-of-5-main-modules" title="Link to this heading"></a></h2>
 <ol class="arabic simple">
 <li><p>Data pre- and post-processing toolkit</p></li>
 </ol>
 <ul class="simple">
-<li><p>Resize a tif data</p></li>
-<li><p>Split a big tif data to blocks</p></li>
-<li><p>Merge h5 files as a tif volume</p></li>
-<li><p>Convert a tif/h5 file as a precomputed data</p></li>
-<li><p>Downsample a precomputed data</p></li>
-<li><p>Generate a mask for affinity map</p></li>
-<li><p>Mask a tif/precomputed data</p></li>
+<li><p>Split a big tif volume into blocks / merge inference blocks back into a volume</p></li>
+<li><p>Convert a tif/h5 file to precomputed (Neuroglancer) format</p></li>
+<li><p>Downsample a precomputed volume (mip pyramid)</p></li>
+<li><p>Generate and apply a mask for affinity maps (tif or precomputed)</p></li>
+<li><p>Resize and crop volumes</p></li>
+<li><p>Generate 3D meshes from a segmentation volume</p></li>
 </ul>
 <ol class="arabic simple" start="2">
 <li><p>Deep learning based affinity maps inference</p></li>
 </ol>
 <blockquote>
-<div><p>Based on <a class="reference external" href="https://connectomics.readthedocs.io/en/latest/index.html">pytorch connectomics</a>.This is a deep learning framework for automatic and semi-automatic annotation of connectomics datasets, powered by <a class="reference external" href="https://pytorch.org/">pytorch</a>.</p>
+<div><p>Based on <a class="reference external" href="https://connectomics.readthedocs.io/en/latest/index.html">pytorch connectomics</a>. This is a deep learning framework for automatic and semi-automatic annotation of connectomics datasets, powered by <a class="reference external" href="https://pytorch.org/">pytorch</a>.</p>
 </div></blockquote>
 <ul class="simple">
-<li><p>Pre-tain / fine-tune a DL model</p></li>
-<li><p>Inference affinity map by blocks</p></li>
+<li><p>Pre-train / fine-tune a DL model</p></li>
+<li><p>Inference affinity maps by blocks over large volumes</p></li>
 </ul>
 <ol class="arabic simple" start="3">
 <li><p>Instance segmentation for affinity maps</p></li>
 </ol>
 <blockquote>
-<div><p>Support global segmentation and large-volume chunking parallel processing, 2D supervoxel and 3D supervoxel</p>
+<div><p>Supports global segmentation and large-volume chunking parallel processing, 2D supervoxel and 3D supervoxel.</p>
 </div></blockquote>
 <ul class="simple">
-<li><p>Affinity map blocks instance segmentation</p></li>
-<li><p>Aggregation of each blocked segmentation result</p></li>
+<li><p>Block-wise instance segmentation in one of several modes:</p>
+<ul>
+<li><p><strong>neuron</strong> — waterz agglomeration (dense; fills the volume)</p></li>
+<li><p><strong>mito / synapse</strong> — binary watershed (sparse objects; respects background)</p></li>
+<li><p><strong>bouton</strong> — binary watershed with neuron-membrane gating</p></li>
+</ul>
+</li>
+<li><p>Aggregation of each blocked segmentation result into global IDs</p></li>
+</ul>
+<ol class="arabic simple" start="4">
+<li><p>Analysis (per-instance morphometrics)</p></li>
+</ol>
+<blockquote>
+<div><p>Organelle-agnostic: mitochondria, boutons, synapses, or any sparse instance volume.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p>Discover each instance’s bounding box from a high-mip volume</p></li>
+<li><p>Compute per-instance morphometric features (volume, surface area, sphericity, hull, PCA axes, …)</p></li>
+<li><p>Reduce to a single <code class="docutils literal notranslate"><span class="pre">morphometrics.parquet</span></code>, embed (PCA + UMAP), and run cross-volume relational analysis</p></li>
+</ul>
+<ol class="arabic simple" start="5">
+<li><p>Proofreading / ground-truth bootstrapping</p></li>
+</ol>
+<blockquote>
+<div><p>Human-in-the-loop correction in <a class="reference external" href="https://webknossos.org/">WebKnossos</a>.</p>
+</div></blockquote>
+<ul class="simple">
+<li><p><strong>Membrane</strong> — crop EM + affinity from precomputed, threshold the affinity to a binary membrane, and upload both to WebKnossos for correction</p></li>
+<li><p><strong>Skeletonize</strong> — skeletonize an instance segmentation into a WebKnossos NML for correction</p></li>
 </ul>
 </section>
 </section>

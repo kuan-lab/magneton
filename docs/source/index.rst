@@ -26,6 +26,8 @@ Kuan Lab Neuron Segmentation Pipeline (Magneton) Documentation
    tutorials/toolkit
    tutorials/aff
    tutorials/ins
+   tutorials/analysis
+   tutorials/proofreading
 
 
 Indices and tables

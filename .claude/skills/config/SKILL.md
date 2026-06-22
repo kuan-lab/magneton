@@ -49,13 +49,15 @@ Note: one instance_segmentation config file holds **both** the segmentation stag
 
 Note: organelle-agnostic (mito, bouton, synapse, …) — the same per-instance bbox-driven pipeline. Relational configs have a different shape (a `volumes:` list), used for cross-volume matching.
 
-### Proofreading (skeleton-driven GT correction)
+### Proofreading (GT correction)
 
 | Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
 |---|---|---|---|
-| `proofreading` / `skeletonize` / `expand` / `nninteractive` | `proofreading/configs/` | `config_fib_b_neuron_fennel.yaml` | `proofreading.main` |
+| `proofreading` / `membrane` / `skeletonize` / `expand` / `nninteractive` | `proofreading/configs/` | `config_fib_b_neuron_fennel.yaml` | `proofreading.main` |
 
-Note: one file holds both the `skeletonize_stage` (runs in the `magneton` env) and `expand_stage` (runs in the `nninteractive` prefix env on GPU). The validated use is skeletonize→WebKnossos-correct; nnInteractive EM expansion is shelved (floods across membranes — see `project_skeleton_nninteractive_workflow` memory).
+Note: one file holds all proofreading stages as top-level sections (key order doesn't matter — stages are keyed by name):
+- **`membrane_stage`** (WORKING, the current method) — crop EM + affinity from precomputed → threshold affinity to a binary membrane → upload EM + membrane to WebKnossos in one command, then correct the membrane in the WKS UI. Crop+threshold run in the `magneton` env; the upload shells out to the `yf354` env (webknossos-libs). Runs interactively (no SLURM job).
+- **`skeletonize_stage`** (the validated half of the skeleton flow, `magneton` env) and **`expand_stage`** (NOT FUNCTIONING — nnInteractive floods across EM membranes; runs in the `nninteractive` prefix env on GPU). See `project_skeleton_nninteractive_workflow` memory. In the template these two sit at the bottom under a `NOT FUNCTIONING` banner.
 
 ## Stage-specific fields to ask about
 
@@ -207,12 +209,34 @@ The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a h
 - `instance_stage.hpc.*` — SLURM array (per-instance feature math)
 - **Relational config** (different shape): top-level `volumes:` list each with `pc` (precomputed) + `name`; `sample_mip`. Use `config_fib_b_relational.yaml` as the template.
 
-### proofreading (skeleton-driven GT correction)
-- `paths.seg` — instance seg to skeletonize (tif or `file://` precomputed)
-- `paths.em` — EM tif (the nnInteractive image, for expand)
-- `paths.output` — work dir (`skeletons.nml`, `expanded.tif`) — **put on shared storage, NOT home** (home quota is full); e.g. `/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/<volume>`
-- `skeletonize_stage`: `source` (`tif`/`precomputed`), `mip`, `res_nm`, `dust_threshold`, `parallel`, `parallel_chunk_size`, `fix_branching`, `fix_borders`; `teasar.*` (`scale`, `const`, `pdrf_exponent`, soma thresholds — the kimimaro tuning surface); `postprocess.{enable,tick_threshold,dust_threshold}`; `downsample_nodes`
-- `expand_stage`: `nml` (the CORRECTED NML from WebKnossos; `null` → uses `<output>/skeletons.nml`), `prompt` (`scribble`/`points`), `point_subsample`, `max_neurons` (0=all), `model_dir` (`null`→resolve from HF cache), `hf_cache`; `hpc.*` is a **GPU** block (`partition: gpu`, `constraint: "a100|h100|h200"`, `gpus`, `mem_per_gpu`, `env` = the `nninteractive` prefix env path, `hf_cache`)
+### proofreading (GT correction)
+- `paths.output` — shared work dir, used by ALL proofreading stages (`em.tif`/`membrane.tif` for membrane; `skeletons.nml`/`expanded.tif` for the skeleton flow) — **put on shared storage, NOT home** (home quota is full); e.g. `/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/<volume>`
+- `paths.seg` — instance seg to skeletonize (tif or `file://` precomputed). Used only by the skeleton flow.
+- `paths.em` — EM tif (the nnInteractive image, for expand). Used only by the skeleton flow. NOTE: `membrane_stage` does NOT use `paths.em` — it has its own `membrane_stage.em.path` (a precomputed source it crops from).
+
+**`membrane_stage`** (WORKING — crop+threshold+upload):
+- `coords` — `[z1, z2, y1, y2, x1, x2]` in the COMMON (post-mip) voxel space; pick `em.mip`/`inference.mip` so both resolve to the SAME resolution over the ROI (the stage hard-errors on shape mismatch). The 8 nm inference is mip0; the 4 nm EM source needs mip1 to also be 8 nm.
+- `voxel_size` — `[x, y, z]` nm at the chosen mips (passed to WKS upload)
+- `inference.path` — affinity inference precomputed (`file://...`, e.g. `fib_X_inference_<model>_v<N>`)
+- `inference.mip` — usually `0` (inference precomputed mip0 is already 8 nm)
+- `inference.channel_reduce` — `min` (default; interior only where ALL channels high) / `mean` / `max`
+- `inference.threshold` — membrane = `reduce(aff) < threshold`. Default `140` (production value, swept Apr 2026 — see `project_membrane_threshold_sweep` memory). Affinity is bimodal (0/255); min 130–140 interchangeable, `[235,254]` cuts into the interior peak → thinner membrane.
+- `inference.membrane_value` — value written for membrane voxels (default `255`; cytoplasm = 0)
+- `em.path` — EM precomputed source (`file://...`, the `Gaussian-aligned_FIBSEM_<dataset>_OML_of_DG` volume)
+- `em.mip` — usually `1` (4 nm source → 8 nm to match inference)
+- `upload.enable` — `true` = crop+threshold+upload; `false` = only write `em.tif`+`membrane.tif`, upload later with `/wk`
+- `upload.env` — webknossos env (`yf354`; webknossos-libs not in `magneton`)
+- `upload.name` — WKS dataset name (`null` → `membrane_<coords>`)
+- `upload.remote_folder` — WKS folder path or 24-hex id (`null` → org default)
+- `upload.out_dir` — local wkw scratch dir the upload script builds before pushing (`null` → `<paths.output>/wk_upload_out`). This is the intermediate staging folder.
+- `upload.cleanup` — `true` = delete the wkw scratch (`<out_dir>/<name>`) after a successful upload (default `false`)
+- `upload.token` — omit; read from `$WEBKNOSSOS_TOKEN` (never commit a token)
+
+**`skeletonize_stage`** (validated half of the skeleton flow):
+- `source` (`tif`/`precomputed`), `mip`, `res_nm`, `dust_threshold`, `parallel`, `parallel_chunk_size`, `fix_branching`, `fix_borders`; `teasar.*` (`scale`, `const`, `pdrf_exponent`, soma thresholds — the kimimaro tuning surface); `postprocess.{enable,tick_threshold,dust_threshold}`; `downsample_nodes`
+
+**`expand_stage`** (NOT FUNCTIONING — nnInteractive floods across EM membranes):
+- `nml` (the CORRECTED NML from WebKnossos; `null` → uses `<output>/skeletons.nml`), `prompt` (`scribble`/`points`), `point_subsample`, `max_neurons` (0=all), `model_dir` (`null`→resolve from HF cache), `hf_cache`; `hpc.*` is a **GPU** block (`partition: gpu`, `constraint: "a100|h100|h200"`, `gpus`, `mem_per_gpu`, `env` = the `nninteractive` prefix env path, `hf_cache`)
 
 ### Standard HPC block (all stages)
 - `hpc.enable`

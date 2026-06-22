@@ -1,0 +1,248 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analysis &mdash; Magneton 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="author" title="About these documents" href="../about.html" />
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Proofreading" href="proofreading.html" />
+    <link rel="prev" title="Instance Segmentation" href="ins.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #2a4d69" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Magneton
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-5-main-modules">Magneton consists of 5 main modules:</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Installation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../installation/conda.html">Virtual Environment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#download-miniconda-or-anaconda">Download Miniconda or Anaconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#run-the-installer">Run the Installer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#follow-the-installation-prompts">Follow the Installation Prompts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#activate-conda">Activate Conda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/conda.html#verify-installation">Verify Installation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../installation/magneton.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#create-a-virtual-environment">Create a Virtual Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#install-magneton">Install Magneton</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-all-modules">Install All Modules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-affinity-maps-inference-module">Install Affinity Maps Inference Module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-waterz">Install Waterz</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Tutorials</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="toolkit.html">Processing Toolkit</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="toolkit.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="toolkit.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="toolkit.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="toolkit.html#data-preprocessing-and-postprocessing">Data preprocessing and postprocessing</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="aff.html">Affinity Map Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="aff.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="aff.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-pretraining">Model pretraining</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-fine-tuning">Model fine-tuning</a></li>
+<li class="toctree-l3"><a class="reference internal" href="aff.html#model-inference">Model inference</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="ins.html">Instance Segmentation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#segmentation-modes">Segmentation modes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#status">Status</a></li>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#discover-bboxes">Discover Bboxes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#per-instance-features">Per-Instance Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reduce-concat">Reduce / Concat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#all-hpc">All [HPC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#embed-pca-umap">Embed (PCA + UMAP)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#relational-cross-volume">Relational (cross-volume)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="proofreading.html">Proofreading</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="proofreading.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="proofreading.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#view-current-config">View Current Config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#membrane-webknossos">Membrane → WebKnossos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#skeletonize">Skeletonize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#expand-nninteractive-not-functional">Expand (nnInteractive) — not functional</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #2a4d69" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Magneton</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Analysis</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/tutorials/analysis.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="analysis">
+<h1>Analysis<a class="headerlink" href="#analysis" title="Link to this heading"></a></h1>
+<p>This tutorial provides step-by-step guidance for the per-instance morphometrics pipeline.</p>
+<blockquote>
+<div><p>Organelle-agnostic: the same pipeline works for mitochondria, boutons, synapses, or any sparse instance-labeled volume.</p>
+</div></blockquote>
+<p>The analysis module reads a high-mip instance-segmentation volume, finds each instance’s bounding box, computes morphometric features per instance, and concatenates them into a single <code class="docutils literal notranslate"><span class="pre">morphometrics.parquet</span></code>. It can then embed the features (PCA + UMAP) and run cross-volume relational analysis.</p>
+<section id="main-menu">
+<h2>Main Menu<a class="headerlink" href="#main-menu" title="Link to this heading"></a></h2>
+<p>Run <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">magneton</span></code> to start the CLI.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">4</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, enter the <strong>Analysis module</strong>.</p>
+</section>
+<section id="options">
+<h2>Options<a class="headerlink" href="#options" title="Link to this heading"></a></h2>
+<p>This module can be used for configuration and for each stage of the morphometrics pipeline. The stages run in order: <strong>Discover → Per-Instance Features → Reduce</strong>, with HPC variants for the heavy steps.</p>
+<section id="global-configuration">
+<h3>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">9</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, view the current <strong>analysis configuration</strong> (resolved from the <code class="docutils literal notranslate"><span class="pre">analysis.main</span></code> config in the global configuration file).</p>
+<p>Key fields:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">paths.input</span></code>: high-mip instance precomputed volume (<code class="docutils literal notranslate"><span class="pre">file://...</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">paths.mip</span></code>: discovery mip (mito → <code class="docutils literal notranslate"><span class="pre">2</span></code> / 16 nm; bouton &amp; synapse → <code class="docutils literal notranslate"><span class="pre">1</span></code> / 8 nm, since smaller objects need a finer mip to avoid downsample dropout).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">paths.output</span></code>: work dir for <code class="docutils literal notranslate"><span class="pre">bboxes.parquet</span></code> and <code class="docutils literal notranslate"><span class="pre">morphometrics.parquet</span></code>.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">features.sa_method</span></code>: surface-area method — <code class="docutils literal notranslate"><span class="pre">face_count</span></code>, <code class="docutils literal notranslate"><span class="pre">marching_cubes</span></code> (default), or paper-faithful <code class="docutils literal notranslate"><span class="pre">sqrt_kernel</span></code>.</p></li>
+</ul>
+</section>
+<section id="discover-bboxes">
+<h3>Discover Bboxes<a class="headerlink" href="#discover-bboxes" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">1</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to read the high-mip volume and find each instance’s bounding box (<code class="docutils literal notranslate"><span class="pre">find_objects</span></code>), writing a bbox manifest.</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">2</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to submit discovery as a big-memory SLURM job. Use the HPC variant for mip-1 / mip-0 discovery, where reading the full volume plus <code class="docutils literal notranslate"><span class="pre">find_objects</span></code> will not fit on a login node.</p>
+</section>
+<section id="per-instance-features">
+<h3>Per-Instance Features<a class="headerlink" href="#per-instance-features" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">3</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to compute per-instance features single-process (useful for debugging).</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">4</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to submit a SLURM array, one task per range of instances. Each instance is cropped from the volume and ~19 features are computed (volume, surface area, sphericity, convex hull, max diameter, and per-PC length / inertia / symmetry / cross-section area / cross-section perimeter for each of 3 principal axes).</p>
+</section>
+<section id="reduce-concat">
+<h3>Reduce / Concat<a class="headerlink" href="#reduce-concat" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">5</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, to concatenate the per-task feature partials into a single <code class="docutils literal notranslate"><span class="pre">morphometrics.parquet</span></code>.</p>
+</section>
+<section id="all-hpc">
+<h3>All [HPC]<a class="headerlink" href="#all-hpc" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">6</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, to run the whole chain on the cluster end-to-end: Discover [HPC] → per-instance array → reduce (the reduce job is queued to run after the array completes).</p>
+</section>
+<section id="embed-pca-umap">
+<h3>Embed (PCA + UMAP)<a class="headerlink" href="#embed-pca-umap" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">7</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, to z-score the features, run PCA + UMAP, and save the embedding and plots.</p>
+</section>
+<section id="relational-cross-volume">
+<h3>Relational (cross-volume)<a class="headerlink" href="#relational-cross-volume" title="Link to this heading"></a></h3>
+<p>Input <code class="docutils literal notranslate"><span class="pre">8</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, to match instances across volumes (e.g. mitochondria / synapses → boutons) and produce relational statistics and plots. This uses a relational config (a <code class="docutils literal notranslate"><span class="pre">volumes:</span></code> list) rather than a single-volume config.</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ins.html" class="btn btn-neutral float-left" title="Instance Segmentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="proofreading.html" class="btn btn-neutral float-right" title="Proofreading" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025, zhen.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

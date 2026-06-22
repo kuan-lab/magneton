@@ -7,15 +7,15 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Processing Toolkit &mdash; Magneton 1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../_static/documentation_options.js?v=f2a433a1"></script>
-      <script src="../_static/doctools.js?v=9a2dae69"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="author" title="About these documents" href="../about.html" />
@@ -47,7 +47,7 @@
               <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-3-main-modules">Magneton consists of 3 main modules:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-5-main-modules">Magneton consists of 5 main modules:</a></li>
 </ul>
 </li>
 </ul>
@@ -97,12 +97,38 @@
 <li class="toctree-l1"><a class="reference internal" href="ins.html">Instance Segmentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="ins.html#main-menu">Main Menu</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ins.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="ins.html#segmentation-modes">Segmentation modes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ins.html#global-configuration">Global Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ins.html#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-pools">Blocks merging: pools</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ins.html#blocks-merging-apply">Blocks merging: apply</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ins.html#status">Status</a></li>
 <li class="toctree-l3"><a class="reference internal" href="ins.html#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#discover-bboxes">Discover Bboxes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#per-instance-features">Per-Instance Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#reduce-concat">Reduce / Concat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#all-hpc">All [HPC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#embed-pca-umap">Embed (PCA + UMAP)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#relational-cross-volume">Relational (cross-volume)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="proofreading.html">Proofreading</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="proofreading.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="proofreading.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#view-current-config">View Current Config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#membrane-webknossos">Membrane → WebKnossos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#skeletonize">Skeletonize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#expand-nninteractive-not-functional">Expand (nnInteractive) — not functional</a></li>
 </ul>
 </li>
 </ul>
@@ -152,7 +178,7 @@ This interface displays the basic information of the current system. The main in
 <p>This module can be used for configuration, data preprocessing and postprocessing.</p>
 <section id="global-configuration">
 <h3>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading"></a></h3>
-<p>Input <code class="docutils literal notranslate"><span class="pre">18</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, view current <strong>global configuration</strong>:
+<p>Input <code class="docutils literal notranslate"><span class="pre">22</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, view current <strong>global configuration</strong>:
 <img alt="global configuration" src="../_images/gc.png" /></p>
 <p>For the title:</p>
 <ul class="simple">
@@ -173,8 +199,10 @@ This interface displays the basic information of the current system. The main in
 <li><p><code class="docutils literal notranslate"><span class="pre">mask_prec</span></code>:  the config file path for masking of precomputed data.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">mask_tif</span></code>: the config file path for masking of tif data.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">resize_tif</span></code>: the config file path for resizing of tif data.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">crop</span></code>: the config file path for the crop tool.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mesh</span></code>: the config file path for the mesh-generation tool.</p></li>
 </ul>
-<p>Input <code class="docutils literal notranslate"><span class="pre">17</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, edit current <strong>global configuration</strong>:</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">21</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, edit current <strong>global configuration</strong>:</p>
 <blockquote>
 <div><p>Currently, only modifications are permitted; additions are not allowed.</p>
 </div></blockquote>
@@ -234,6 +262,18 @@ This interface displays the basic information of the current system. The main in
 <p>Input <code class="docutils literal notranslate"><span class="pre">15</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to resize tif volumes to new voxel size or dimension.</p>
 <p>Input <code class="docutils literal notranslate"><span class="pre">16</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to resize tif volumes to new voxel size or dimension.</p>
 <p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">resize_tif</span></code> in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.</p>
+</section>
+<section id="crop-tool">
+<h4>Crop tool<a class="headerlink" href="#crop-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">17</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to crop a region (ROI) from a volume (tif / h5 / precomputed).</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">18</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to crop a region from a volume.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">crop</span></code> in global configuration file). The crop ROI is given as voxel coordinates <code class="docutils literal notranslate"><span class="pre">[z1,</span> <span class="pre">z2,</span> <span class="pre">y1,</span> <span class="pre">y2,</span> <span class="pre">x1,</span> <span class="pre">x2]</span></code>; for precomputed input the <code class="docutils literal notranslate"><span class="pre">mip</span></code> to read can also be set.</p>
+</section>
+<section id="mesh-tool">
+<h4>Mesh tool<a class="headerlink" href="#mesh-tool" title="Link to this heading"></a></h4>
+<p>Input <code class="docutils literal notranslate"><span class="pre">19</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>local resources</strong></em> to generate 3D meshes from a precomputed segmentation volume (via igneous).</p>
+<p>Input <code class="docutils literal notranslate"><span class="pre">20</span></code> and <code class="docutils literal notranslate"><span class="pre">Enter</span></code>, using <em><strong>HPC resources</strong></em> to generate 3D meshes from a precomputed segmentation volume.</p>
+<p>These tools are based on the configuration files (<code class="docutils literal notranslate"><span class="pre">mesh</span></code> in global configuration file). The meshes are written next to the segmentation volume and can be rendered in Neuroglancer.</p>
 </section>
 </section>
 </section>

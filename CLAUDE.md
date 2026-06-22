@@ -26,7 +26,7 @@ magneton/
 │   └── lib/                     # features (PC math, hull, symmetry), surface_area (3 methods), plane_sampling, precomputed_io
 ├── proofreading/                # Skeleton-driven proofreading / ground-truth bootstrapping
 │   ├── configs/                 # Per-volume YAML configs
-│   ├── stages/                  # skeletonize (kimimaro→NML), expand (nnInteractive), expand_hpc
+│   ├── stages/                  # skeletonize (kimimaro→NML), expand (nnInteractive), expand_hpc, membrane (crop+threshold→WKS)
 │   └── lib/                     # skeleton_io (kimimaro skeletonize, NML read/write)
 ├── jobs/                        # SLURM job scripts and logs
 │   ├── pytc/                    # PyTC inference jobs
@@ -47,7 +47,9 @@ magneton/
 4. **Merge** (`instance_segmentation/stages/merge_*`) - Stitch block-level segments into global IDs
 5. **Downsample** (`toolkit/tools/downsample_prec.py`) - Generate mip levels via igneous
 6. **Analysis** (`analysis/`) - Per-instance morphometrics for any sparse organelle (mito, bouton, synapse): read high-mip volume → `find_objects` for bbox manifest → crop+features per instance (SLURM array) → concat to `morphometrics.parquet`. 19 features per instance (volume, surface area, sphericity, hull, max diameter, plus PC{length, inertia, symmetry, cross-section area, cross-section perimeter} for each of 3 PC axes). SA method selectable: `face_count`, `marching_cubes` (default), or paper-faithful `sqrt_kernel`.
-7. **Proofreading** (`proofreading/`) - Skeleton-driven GT/proofreading loop: skeletonize instance segments → NML (kimimaro) → correct skeletons in WebKnossos → expand corrected skeletons into dense segments (nnInteractive). Skeletonize runs in the `magneton` env; expand runs in a separate `nninteractive` env on GPU.
+7. **Proofreading** (`proofreading/`) - GT/proofreading loop, two entries:
+   - *Skeleton-driven*: skeletonize instance segments → NML (kimimaro) → correct skeletons in WebKnossos → expand corrected skeletons into dense segments (nnInteractive). Skeletonize runs in the `magneton` env; expand runs in a separate `nninteractive` env on GPU. (nnInteractive expansion failed on EM — domain mismatch; see 2026-06-17 lab notebook. Skeletonize→WKS half is validated.)
+   - *Membrane-annotation* (`membrane` stage): crop EM + affinity inference from precomputed → threshold affinity to a binary membrane (`reduce(aff) < threshold`) → upload EM + membrane to WebKnossos in one command → correct the membrane in the WKS UI. Crop+threshold run in `magneton`; the upload shells out to the `yf354` env.
 
 ## Key Conventions
 

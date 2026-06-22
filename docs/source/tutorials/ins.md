@@ -19,6 +19,15 @@ This module can be used for configuration, affinity map segmentation by blocks, 
 
 - In blocks merging: due to segmentation instability and field-of-view limitations, this module performs the most optimal merging of instance segmentation results for each neural network block.
 
+##### Segmentation modes
+The segmentation step supports several modes, selected by the ```mode.type``` key in the instance-segmentation config (```main``` in the global configuration file). The mode controls how supervoxels are produced inside each block; the merge step is the same for all modes.
+
+- **neuron** — waterz agglomeration. Produces a dense labeling that fills the volume; intended for neuron membranes / affinity maps.
+- **mito** / **synapse** — binary watershed. Seeds from high-confidence regions and grows within a foreground mask, so sparse objects are segmented while background is preserved. Tunable via ```mode.mito``` (```seed_threshold```, ```foreground_threshold```, ```min_segment_size```, ```seed_min_size```, ```erosion_iters```, …).
+- **bouton** — binary watershed with neuron-membrane gating. A neuron affinity is used to force the bouton affinity to zero across membranes/extracellular space before watershed, breaking cross-membrane merges. Configured under ```mode.bouton``` (the mito watershed knobs plus ```neuron_ref_path```, ```neuron_aff_threshold```, ```dilation_iters```, …).
+
+> A single instance-segmentation config file holds both the ```segmentation_stage``` and the ```merge_stage```; the mode block lives alongside them.
+
 ##### Global Configuration
 This section is identical to the previous configuration. Only an interface has been added to facilitate configuration.
 Input ```10``` and ```Enter```, view current **global configuration**:

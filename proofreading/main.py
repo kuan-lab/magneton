@@ -8,6 +8,11 @@ Skeleton-driven proofreading / GT-bootstrap loop:
                          [ upload via /wk, correct in WebKnossos, download NML ]
   Stage B  expand        Corrected NML + EM -> dense segments (nnInteractive).
   Stage B' expand-hpc    Submit stage B as a 1-GPU SLURM job (the usual path).
+
+Alternative proofreading entry (no skeleton):
+  Stage M  membrane      Crop EM + affinity from precomputed -> threshold to a
+                         binary membrane -> upload EM + membrane to WebKnossos
+                         (one command). Correct the membrane in the WKS UI.
 """
 from __future__ import annotations
 
@@ -47,6 +52,11 @@ def _run_expand_hpc(cfg_path: str, dry_run: bool):
     submit(load_config(cfg_path), cfg_path=cfg_path, dry_run=dry_run)
 
 
+def _run_membrane(cfg_path: str):
+    from magneton.proofreading.stages.membrane import membrane
+    membrane(load_config(cfg_path))
+
+
 def run(args, global_cfg=None):
     cfg_path = _resolve_cfg_path(getattr(args, "config", None))
     stage = args.stage
@@ -56,6 +66,8 @@ def run(args, global_cfg=None):
         _run_expand(cfg_path)
     elif stage == "expand-hpc":
         _run_expand_hpc(cfg_path, getattr(args, "dry_run", False))
+    elif stage == "membrane":
+        _run_membrane(cfg_path)
     else:
         raise SystemExit(f"unknown stage: {stage}")
 
@@ -63,7 +75,8 @@ def run(args, global_cfg=None):
 def _build_parser():
     p = argparse.ArgumentParser(prog="magneton.proofreading.main",
                                 description="skeleton-driven proofreading pipeline")
-    p.add_argument("--stage", choices=["skeletonize", "expand", "expand-hpc"],
+    p.add_argument("--stage",
+                   choices=["skeletonize", "expand", "expand-hpc", "membrane"],
                    required=False, help="pipeline stage to run")
     p.add_argument("--config", required=False, default=None, help="per-volume YAML config")
     p.add_argument("--dry-run", action="store_true", help="expand-hpc: generate script, don't sbatch")
@@ -79,6 +92,7 @@ def _menu_table():
     t.add_row("1", "Skeletonize",          "Instance seg -> skeletons.nml (kimimaro)")
     t.add_row("2", "Expand (nnInteractive)", "Corrected NML + EM -> dense segments (needs GPU)")
     t.add_row("3", "Expand [HPC]",          "Submit expand as a 1-GPU SLURM job")
+    t.add_row("4", "Membrane -> WKS",       "Crop EM+affinity from precomputed -> binary membrane -> upload")
     t.add_row("9", "View Current Config",   "Print the resolved proofreading config")
     t.add_row("0", "Return",                "Back to magneton main menu")
     return t
@@ -86,7 +100,7 @@ def _menu_table():
 
 def run_interactive():
     cfg_path = _resolve_cfg_path(None)
-    pool = ["0", "1", "2", "3", "9"]
+    pool = ["0", "1", "2", "3", "4", "9"]
     while True:
         console.rule("[bold bright_white]Proofreading Menu[/bold bright_white]", style="bold white")
         console.print(f"[white] Config:[/white] {cfg_path}")
@@ -117,7 +131,8 @@ def run_interactive():
         a = Args()
         a.config = cfg_path
         a.dry_run = False
-        a.stage = {"1": "skeletonize", "2": "expand", "3": "expand-hpc"}[choice]
+        a.stage = {"1": "skeletonize", "2": "expand", "3": "expand-hpc",
+                   "4": "membrane"}[choice]
         try:
             run(a)
         except Exception as e:

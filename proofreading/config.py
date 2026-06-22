@@ -36,6 +36,8 @@ def get_stage_config(cfg, stage: str):
         return cfg.get("skeletonize_stage", {})
     if stage == "expand":
         return cfg.get("expand_stage", {})
+    if stage == "membrane":
+        return cfg.get("membrane_stage", {})
     return {}
 
 

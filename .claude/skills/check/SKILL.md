@@ -27,8 +27,11 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 | `mesh`, `meshing` | `mesh` |
 | `analysis`, `morphometrics`, `mito features` | `analysis_*` |
 | `proofreading`, `skeletonize`, `expand`, `nninteractive` | `proofreading_expand` |
+| `membrane` | *(no job dir — runs interactively; see note)* |
 
 Note: `jobs/merge/` is the *toolkit* merge-volumes tool. `jobs/merge_*/` suffixed dirs are almost always *instance_segmentation* merge stage (from `merge_stage.hpc.job_dir` in the instance seg config). The keyword "merge" alone is ambiguous — infer from context (if the user is talking about segmentation/waterz flow, it's instance seg merge; if they just converted a volume, it's toolkit merge).
+
+Note: the proofreading **`membrane`** stage submits **no SLURM job** — it crops+thresholds in the `magneton` env and shells the upload out to the `yf354` env, all interactively. There is nothing in `jobs/` to query. If asked to `/check` it, skip the squeue/sacct/analyzer steps and go straight to output integrity (Step 7): confirm `em.tif` + `membrane.tif` under the proofreading config's `paths.output`, plus the WKS upload (the run prints `Uploaded '<name>' to <url>` / `Annotation: <url>`). Same for **`skeletonize`** (interactive, `magneton` env); only **`expand`/`nninteractive`** uses the `proofreading_expand` SLURM dir.
 
 ## Job directory layout
 
@@ -129,7 +132,7 @@ Report findings:
    - **toolkit downsample**: `downsample.source_path` — mip levels written in place
    - **toolkit crop**: `crop.output`
    - **instance_segmentation merge_stage**: `paths.output`, `checkpoint.merge_dir`
-   - **proofreading**: `paths.output` (`skeletons.nml` for skeletonize; `expanded.tif` for expand). NOTE: big outputs are on shared storage `/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/<volume>/`, not home — the expand stage runs in the `nninteractive` prefix env on a GPU node.
+   - **proofreading**: `paths.output` (`membrane` → `em.tif` + `membrane.tif` and the wkw scratch at `membrane_stage.upload.out_dir` or `<output>/wk_upload_out`; `skeletonize` → `skeletons.nml`; `expand` → `expanded.tif`). NOTE: big outputs are on shared storage `/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/<volume>/`, not home. `membrane`/`skeletonize` are interactive (`magneton` env); only `expand` runs as a SLURM GPU job in the `nninteractive` prefix env.
 3. Strip any `file://` prefix and check the path:
    - Exists?
    - Non-empty (file size > 0, or directory has entries)?

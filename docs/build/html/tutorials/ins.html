@@ -7,20 +7,21 @@
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Instance Segmentation &mdash; Magneton 1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=92fd9be5" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
 
   
       <script src="../_static/jquery.js?v=5d32c60e"></script>
       <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
       <script src="../_static/documentation_options.js?v=f2a433a1"></script>
-      <script src="../_static/doctools.js?v=9a2dae69"></script>
-      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
       <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="author" title="About these documents" href="../about.html" />
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Analysis" href="analysis.html" />
     <link rel="prev" title="Affinity Map Inference" href="aff.html" /> 
 </head>
 
@@ -46,7 +47,7 @@
               <p class="caption" role="heading"><span class="caption-text">Introduction</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../about.html">About</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-3-main-modules">Magneton consists of 3 main modules:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../about.html#magneton-consists-of-5-main-modules">Magneton consists of 5 main modules:</a></li>
 </ul>
 </li>
 </ul>
@@ -96,12 +97,38 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Instance Segmentation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#main-menu">Main Menu</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#segmentation-modes">Segmentation modes</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#global-configuration">Global Configuration</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#affinity-map-segmentation-by-blocks">Affinity map segmentation by blocks</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#blocks-merging-pools">Blocks merging: pools</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#blocks-merging-apply">Blocks merging: apply</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#status">Status</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#clean">Clean</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="analysis.html">Analysis</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="analysis.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#global-configuration">Global Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#discover-bboxes">Discover Bboxes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#per-instance-features">Per-Instance Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#reduce-concat">Reduce / Concat</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#all-hpc">All [HPC]</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#embed-pca-umap">Embed (PCA + UMAP)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="analysis.html#relational-cross-volume">Relational (cross-volume)</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="proofreading.html">Proofreading</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="proofreading.html#main-menu">Main Menu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="proofreading.html#options">Options</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#view-current-config">View Current Config</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#membrane-webknossos">Membrane → WebKnossos</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#skeletonize">Skeletonize</a></li>
+<li class="toctree-l3"><a class="reference internal" href="proofreading.html#expand-nninteractive-not-functional">Expand (nnInteractive) — not functional</a></li>
 </ul>
 </li>
 </ul>
@@ -149,6 +176,18 @@
 <li><p>In affinity map segmentation: perform superpixelization and aggregation on precomputed affinity maps in block-wise fashion to generate instance segmentation results for neurons.</p></li>
 <li><p>In blocks merging: due to segmentation instability and field-of-view limitations, this module performs the most optimal merging of instance segmentation results for each neural network block.</p></li>
 </ul>
+<section id="segmentation-modes">
+<h3>Segmentation modes<a class="headerlink" href="#segmentation-modes" title="Link to this heading"></a></h3>
+<p>The segmentation step supports several modes, selected by the <code class="docutils literal notranslate"><span class="pre">mode.type</span></code> key in the instance-segmentation config (<code class="docutils literal notranslate"><span class="pre">main</span></code> in the global configuration file). The mode controls how supervoxels are produced inside each block; the merge step is the same for all modes.</p>
+<ul class="simple">
+<li><p><strong>neuron</strong> — waterz agglomeration. Produces a dense labeling that fills the volume; intended for neuron membranes / affinity maps.</p></li>
+<li><p><strong>mito</strong> / <strong>synapse</strong> — binary watershed. Seeds from high-confidence regions and grows within a foreground mask, so sparse objects are segmented while background is preserved. Tunable via <code class="docutils literal notranslate"><span class="pre">mode.mito</span></code> (<code class="docutils literal notranslate"><span class="pre">seed_threshold</span></code>, <code class="docutils literal notranslate"><span class="pre">foreground_threshold</span></code>, <code class="docutils literal notranslate"><span class="pre">min_segment_size</span></code>, <code class="docutils literal notranslate"><span class="pre">seed_min_size</span></code>, <code class="docutils literal notranslate"><span class="pre">erosion_iters</span></code>, …).</p></li>
+<li><p><strong>bouton</strong> — binary watershed with neuron-membrane gating. A neuron affinity is used to force the bouton affinity to zero across membranes/extracellular space before watershed, breaking cross-membrane merges. Configured under <code class="docutils literal notranslate"><span class="pre">mode.bouton</span></code> (the mito watershed knobs plus <code class="docutils literal notranslate"><span class="pre">neuron_ref_path</span></code>, <code class="docutils literal notranslate"><span class="pre">neuron_aff_threshold</span></code>, <code class="docutils literal notranslate"><span class="pre">dilation_iters</span></code>, …).</p></li>
+</ul>
+<blockquote>
+<div><p>A single instance-segmentation config file holds both the <code class="docutils literal notranslate"><span class="pre">segmentation_stage</span></code> and the <code class="docutils literal notranslate"><span class="pre">merge_stage</span></code>; the mode block lives alongside them.</p>
+</div></blockquote>
+</section>
 <section id="global-configuration">
 <h3>Global Configuration<a class="headerlink" href="#global-configuration" title="Link to this heading"></a></h3>
 <p>This section is identical to the previous configuration. Only an interface has been added to facilitate configuration.
@@ -200,6 +239,7 @@ Input <code class="docutils literal notranslate"><span class="pre">6</span></cod
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="aff.html" class="btn btn-neutral float-left" title="Affinity Map Inference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="analysis.html" class="btn btn-neutral float-right" title="Analysis" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

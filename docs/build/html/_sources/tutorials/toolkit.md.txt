@@ -18,7 +18,7 @@ Input ```1``` and ```Enter```, enter the **processing toolkit** menu:
 This module can be used for configuration, data preprocessing and postprocessing. 
 
 ##### Global Configuration
-Input ```18``` and ```Enter```, view current **global configuration**:
+Input ```22``` and ```Enter```, view current **global configuration**:
 ![global configuration](../_static/gc.png)
 
 For the title:
@@ -36,9 +36,11 @@ For the keys in toolkit module:
 - ```mask_prec```:  the config file path for masking of precomputed data.
 - ```mask_tif```: the config file path for masking of tif data.
 - ```resize_tif```: the config file path for resizing of tif data.
+- ```crop```: the config file path for the crop tool.
+- ```mesh```: the config file path for the mesh-generation tool.
 
 
-Input ```17``` and ```Enter```, edit current **global configuration**:
+Input ```21``` and ```Enter```, edit current **global configuration**:
 > Currently, only modifications are permitted; additions are not allowed.
 
 You can select a value to change:
@@ -106,7 +108,17 @@ Input ```16``` and ```Enter```, using ***HPC resources*** to resize tif volumes 
 
 These tools are based on the configuration files (```resize_tif``` in global configuration file).Before start the converting, you can modify the configuration by CLI or any tools.
 
+###### Crop tool
+Input ```17``` and ```Enter```, using ***local resources*** to crop a region (ROI) from a volume (tif / h5 / precomputed).
 
+Input ```18``` and ```Enter```, using ***HPC resources*** to crop a region from a volume.
 
+These tools are based on the configuration files (```crop``` in global configuration file). The crop ROI is given as voxel coordinates ```[z1, z2, y1, y2, x1, x2]```; for precomputed input the ```mip``` to read can also be set.
 
+###### Mesh tool
+Input ```19``` and ```Enter```, using ***local resources*** to generate 3D meshes from a precomputed segmentation volume (via igneous).
+
+Input ```20``` and ```Enter```, using ***HPC resources*** to generate 3D meshes from a precomputed segmentation volume.
+
+These tools are based on the configuration files (```mesh``` in global configuration file). The meshes are written next to the segmentation volume and can be rendered in Neuroglancer.
 
