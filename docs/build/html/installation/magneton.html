@@ -69,6 +69,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#install-waterz">Install Waterz</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="#webknossos-upload-environment">WebKnossos / Upload Environment</a></li>
 </ul>
 </li>
 </ul>
@@ -226,6 +227,15 @@ After waterz installed</p>
 </pre></div>
 </div>
 </section>
+</section>
+<section id="webknossos-upload-environment">
+<h2>WebKnossos / Upload Environment<a class="headerlink" href="#webknossos-upload-environment" title="Link to this heading"></a></h2>
+<p>The WebKnossos upload step (the proofreading <em>membrane</em> stage and <code class="docutils literal notranslate"><span class="pre">upload_webknossos.py</span></code>) needs <code class="docutils literal notranslate"><span class="pre">webknossos</span></code> and <code class="docutils literal notranslate"><span class="pre">SimpleITK</span></code>, which are <strong>not</strong> in the <code class="docutils literal notranslate"><span class="pre">magneton</span></code> env. Install them in a separate environment (name it whatever you like — <code class="docutils literal notranslate"><span class="pre">wks</span></code> below), and set <code class="docutils literal notranslate"><span class="pre">upload.env</span></code> in the proofreading config to that name:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>conda<span class="w"> </span>create<span class="w"> </span>-y<span class="w"> </span>-n<span class="w"> </span>wks<span class="w"> </span><span class="nv">python</span><span class="o">=</span><span class="m">3</span>.11
+conda<span class="w"> </span>activate<span class="w"> </span>wks
+pip<span class="w"> </span>install<span class="w"> </span>webknossos<span class="w"> </span>SimpleITK<span class="w"> </span>cloudvolume<span class="w"> </span>tifffile
+</pre></div>
+</div>
 </section>
 </section>
 

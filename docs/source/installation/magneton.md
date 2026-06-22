@@ -71,4 +71,12 @@ If error: ImportError: ... libstdc++.so.6: version `GLIBCXX_3.4.32' not found ..
 conda install -c conda-forge libstdcxx-ng
 ```
 
+#### WebKnossos / Upload Environment
+The WebKnossos upload step (the proofreading *membrane* stage and `upload_webknossos.py`) needs `webknossos` and `SimpleITK`, which are **not** in the `magneton` env. Install them in a separate environment (name it whatever you like — `wks` below), and set `upload.env` in the proofreading config to that name:
+```bash
+conda create -y -n wks python=3.11
+conda activate wks
+pip install webknossos SimpleITK cloudvolume tifffile
+```
+
 

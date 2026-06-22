@@ -68,6 +68,7 @@
 <li class="toctree-l3"><a class="reference internal" href="../installation/magneton.html#install-waterz">Install Waterz</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="../installation/magneton.html#webknossos-upload-environment">WebKnossos / Upload Environment</a></li>
 </ul>
 </li>
 </ul>
@@ -199,7 +200,7 @@
 <li><p><code class="docutils literal notranslate"><span class="pre">upload.enable</span></code> (set <code class="docutils literal notranslate"><span class="pre">false</span></code> to only write the TIFs and upload later), <code class="docutils literal notranslate"><span class="pre">upload.remote_folder</span></code> (a WebKnossos folder path, id, or dashboard URL), <code class="docutils literal notranslate"><span class="pre">upload.out_dir</span></code> (local wkw scratch dir), <code class="docutils literal notranslate"><span class="pre">upload.cleanup</span></code>.</p></li>
 </ul>
 <blockquote>
-<div><p>The crop + threshold run in the <code class="docutils literal notranslate"><span class="pre">magneton</span></code> env; the upload runs in the <code class="docutils literal notranslate"><span class="pre">yf354</span></code> env (which has webknossos-libs). A WebKnossos auth token is read from the <code class="docutils literal notranslate"><span class="pre">WEBKNOSSOS_TOKEN</span></code> environment variable. The whole step is light enough to run interactively — no HPC needed.</p>
+<div><p>The crop + threshold run in the <code class="docutils literal notranslate"><span class="pre">magneton</span></code> env; the upload runs in a separate env that has webknossos-libs (set its name via <code class="docutils literal notranslate"><span class="pre">upload.env</span></code> in the config). A WebKnossos auth token is read from the <code class="docutils literal notranslate"><span class="pre">WEBKNOSSOS_TOKEN</span></code> environment variable. The whole step is light enough to run interactively — no HPC needed.</p>
 </div></blockquote>
 </section>
 <section id="skeletonize">

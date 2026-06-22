@@ -34,7 +34,7 @@ Key config fields (under ```membrane_stage```):
 - ```em.path``` / ```em.mip```.
 - ```upload.enable``` (set ```false``` to only write the TIFs and upload later), ```upload.remote_folder``` (a WebKnossos folder path, id, or dashboard URL), ```upload.out_dir``` (local wkw scratch dir), ```upload.cleanup```.
 
-> The crop + threshold run in the ```magneton``` env; the upload runs in the ```yf354``` env (which has webknossos-libs). A WebKnossos auth token is read from the ```WEBKNOSSOS_TOKEN``` environment variable. The whole step is light enough to run interactively — no HPC needed.
+> The crop + threshold run in the ```magneton``` env; the upload runs in a separate env that has webknossos-libs (set its name via ```upload.env``` in the config). A WebKnossos auth token is read from the ```WEBKNOSSOS_TOKEN``` environment variable. The whole step is light enough to run interactively — no HPC needed.
 
 ##### Skeletonize
 Input ```1``` and ```Enter``` to skeletonize the instance segmentation (```paths.seg```) into ```skeletons.nml``` with ```kimimaro```. Upload it to WebKnossos for skeleton-level correction. The TEASAR parameters under ```skeletonize_stage.teasar``` are the main tuning surface.
