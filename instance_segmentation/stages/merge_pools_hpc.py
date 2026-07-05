@@ -60,6 +60,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     mem = hpc.get("mem", "16G")
     cpus = hpc.get("cpus", "8")
     partition = hpc.get("partition", None)
+    gres = hpc.get("gres", None)      # e.g. "gpu:1" to borrow CPU cores on a GPU-partition node
     # account = hpc.get("account", None)
     # qos = hpc.get("qos", None)
     extra_modules = hpc.get("extra_modules", [])
@@ -84,6 +85,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         f"#SBATCH --error={log_dir}/%x_%A_%a.err",
     ]
     if partition:   lines.append(f"#SBATCH --partition={partition}")
+    if gres:        lines.append(f"#SBATCH --gres={gres}")
     # if account:     lines.append(f"#SBATCH --account={account}")
     # if qos:         lines.append(f"#SBATCH --qos={qos}")
 

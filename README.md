@@ -51,28 +51,41 @@ Runs the toolkit, affinity inference, instance segmentation, analysis, and the c
 ```bash
 conda create -y -n magneton python=3.9
 conda activate magneton
+
 # PyTorch with the matching CUDA (H100/A100 → 12.4):
-conda install pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia
+conda install -y pytorch torchvision torchaudio pytorch-cuda=12.4 -c pytorch -c nvidia
+# conda pulls in MKL 2025.x, which breaks `import torch`
+# (ImportError: undefined symbol: iJIT_NotifyEvent). Pin MKL back to 2024.0:
+conda install -y "mkl=2024.0" -c conda-forge
+# boost headers are required to compile the waterz extension:
+conda install -y boost -c conda-forge
 
 git clone https://github.com/kuan-lab/magneton.git
 cd magneton
 pip install --editable .                 # magneton + toolkit + analysis + proofreading
-cd pytorch_connectomics && pip install --editable . && cd ..   # affinity inference
-cd waterz && pip install --editable . && cd ..                 # instance segmentation
+cd pytorch_connectomics && pip install --editable . && cd ..   # affinity inference (also installs Cython)
+# waterz's setup.py imports Cython + numpy at build time, so build it WITHOUT pip's
+# build isolation — the previous step already put Cython + numpy in the env:
+cd waterz && pip install --editable . --no-build-isolation && cd ..   # instance segmentation
+
+# skeletonize proofreading needs wknml (not pulled in by anything above):
+pip install wknml
+# wknml's install bumps numpy to 2.x; monai and the waterz/mahotas C-extensions
+# need numpy<2, so re-pin numpy LAST:
+pip install "numpy==1.26.4"
 ```
 
 Key packages that end up in this env: `torch`, `cloudvolume`, `waterz`, `igneous` (downsample/mesh), `kimimaro` + `wknml` (skeletonize), `connectomics`, `tifffile`.
 
-**Common build errors and fixes** (mostly from the `waterz` build):
+> The first time a `neuron`-mode segmentation runs, `waterz` JIT-compiles its C++ backend (with `boost` + your system `g++`) into `~/.cython/inline/` — expect a one-off compile on the first block, then it is cached.
+
+**Other build errors that can show up on some systems** (the steps above already cover the ones you are certain to hit):
 
 | Error | Fix |
 |-------|-----|
-| `boost/multi_array.hpp: No such file or directory` | `conda install boost` |
-| `ModuleNotFoundError: No module named 'Cython'` | `pip install cython` |
-| `'PyDataType_ELSIZE' was not declared in this scope` | `pip install --upgrade numpy` |
-| `monai 1.4.0 requires numpy<2.0,>=1.24` (after waterz installs) | `pip install numpy==1.26.4` |
-| `No module named 'mahotas'` | `pip install mahotas` |
 | `libstdc++.so.6: version GLIBCXX_3.4.32 not found` | `conda install -c conda-forge libstdcxx-ng` |
+| `'PyDataType_ELSIZE' was not declared in this scope` (waterz build, numpy too old) | `pip install --upgrade numpy && pip install numpy==1.26.4` |
+| `No module named 'mahotas'` (only if `pip install --editable .` was skipped) | `pip install mahotas` |
 
 ### WebKnossos / upload environment
 The WebKnossos upload step needs `webknossos` and `SimpleITK`, which are **not** in the `magneton` env. Create a separate environment for it (name it whatever you like — `wks` below):

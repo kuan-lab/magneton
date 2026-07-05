@@ -136,9 +136,16 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         vol_shape_zyx, vol_offset_zyx = apply_roi(
             vol_shape_zyx, vol_offset_zyx, _roi, output_chunk_size=_chunk)
         _out_planes = int(_base.get("MODEL", {}).get("OUT_PLANES", 3))
+        # Mirror run.py: optionally size the output to the ROI (offset = ROI
+        # start). Must match the worker side or array tasks find a mismatched
+        # volume. ZYX -> XYZ. See GEOMETRY.CROP_OUTPUT_TO_ROI.
+        _crop_out = bool(_geom.get("CROP_OUTPUT_TO_ROI", False)) and _roi is not None
+        _out_size_xyz = (vol_shape_zyx[2], vol_shape_zyx[1], vol_shape_zyx[0]) if _crop_out else None
+        _out_offset_xyz = (vol_offset_zyx[2], vol_offset_zyx[1], vol_offset_zyx[0]) if _crop_out else None
         init_output_volume(_image_name, _output_path, mip=_mip,
                            num_channels=_out_planes,
-                           dtype="uint8", chunk_size=_chunk)
+                           dtype="uint8", chunk_size=_chunk,
+                           output_size_xyz=_out_size_xyz, output_offset_xyz=_out_offset_xyz)
         n_blocks = block_count(vol_shape_zyx, core_size=_core)
         num_batches = _math.ceil(n_blocks / chunks_per_task)
         batch_num = int(_mj_cfg.get("batch_num", hpc.get("batch_num", num_batches)))

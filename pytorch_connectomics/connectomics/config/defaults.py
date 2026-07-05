@@ -539,6 +539,16 @@ _C.INFERENCE.GEOMETRY.MIP = 0
 # None = whole volume. ROI bounds are snapped to chunk boundaries so
 # cores remain chunk-aligned (lock-free).
 _C.INFERENCE.GEOMETRY.ROI = None
+# When an ROI is set, this controls the output volume's declared geometry:
+#   False (default): output spans the FULL input extent (offset 0), data
+#       written sparsely into the ROI. Keeps absolute coords aligned with the
+#       source for Neuroglancer and the origin-(0,0,0) instance-seg pipeline.
+#   True: output is sized to the ROI, with voxel_offset = ROI start (so it
+#       stays world-aligned). Smaller/cleaner standalone affinity. NOTE: the
+#       instance-seg/merge pipeline assumes origin (0,0,0), so a roi-sized
+#       output isn't directly consumable there yet — use it for viewing/sharing
+#       until those stages are made offset-aware. No effect when ROI is None.
+_C.INFERENCE.GEOMETRY.CROP_OUTPUT_TO_ROI = False
 
 
 def get_cfg_defaults():

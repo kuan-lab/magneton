@@ -39,6 +39,7 @@ def main():
     mip = stage_cfg.get("mip", 0)
     local_ckpt_dir = cfg["checkpoint"]["segmentation_dir"]
     metadata_dir   = stage_cfg.get("metadata_dir", "magneton/local_metadata")
+    overlap        = tuple(cfg.get("block", {}).get("overlap", [0, 0, 0]))
 
     # Mode configuration
     mode_cfg = cfg.get("mode", {})
@@ -66,7 +67,9 @@ def main():
                 output_local_base=output_local_base,
                 mip=mip,
                 stage_cfg=stage_cfg,
-                mode_cfg=mode_cfg
+                mode_cfg=mode_cfg,
+                overlap=overlap,
+                metadata_dir=metadata_dir,
             )
             futures.append(fut)
 

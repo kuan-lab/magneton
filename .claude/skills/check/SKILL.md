@@ -15,6 +15,7 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 |---|---|
 | `seg`, `segmentation`, `waterz`, `mito seg` | `seg`, `seg_*` |
 | `merge` (instance seg merge) | `merge`, `merge_*` |
+| `merge-supervox`, `supervox`, `supervoxel` | `merge_*/supervox` |
 | `pytc`, `inference`, `training`, `affinity` | `pytc` |
 | `convert`, `prec`, `to precomputed` | `convert` |
 | `downsample`, `mip`, `igneous` | `downsample` |
@@ -30,6 +31,8 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 | `membrane` | *(no job dir — runs interactively; see note)* |
 
 Note: `jobs/merge/` is the *toolkit* merge-volumes tool. `jobs/merge_*/` suffixed dirs are almost always *instance_segmentation* merge stage (from `merge_stage.hpc.job_dir` in the instance seg config). The keyword "merge" alone is ambiguous — infer from context (if the user is talking about segmentation/waterz flow, it's instance seg merge; if they just converted a volume, it's toolkit merge).
+
+Note: **`merge-supervox`** (supervoxel proofreading) is a **single multi-core node job**, not a SLURM array (log in `merge_<volume>/supervox/logs/merge_supervox_<jobid>.out`). Unlike the array-based merge-apply, there is one task. Output integrity: the summary line reports `N supervox, K agglomerates, ... | graph components=K (should == K)` — the `components == agglomerates` self-check is the health signal. Also confirm `paths.supervox_output` (the global supervoxel precomputed) and `paths.supervox_agglomerate_npz` were written.
 
 Note: the proofreading **`membrane`** stage submits **no SLURM job** — it crops+thresholds in the `magneton` env and shells the upload out to the `yf354` env, all interactively. There is nothing in `jobs/` to query. If asked to `/check` it, skip the squeue/sacct/analyzer steps and go straight to output integrity (Step 7): confirm `em.tif` + `membrane.tif` under the proofreading config's `paths.output`, plus the WKS upload (the run prints `Uploaded '<name>' to <url>` / `Annotation: <url>`). Same for **`skeletonize`** (interactive, `magneton` env); only **`expand`/`nninteractive`** uses the `proofreading_expand` SLURM dir.
 

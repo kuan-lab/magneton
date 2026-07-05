@@ -82,8 +82,18 @@ def skeletonize(seg, res_nm, *, dust_threshold=100, parallel=8,
     return skels
 
 
-def write_nml(skels, res_nm, out_path: str, name: str = "proofreading"):
-    """Write {label: Skeleton} to a WebKnossos NML. Vertices (nm) -> voxel coords."""
+def write_nml(skels, res_nm, out_path: str, name: str = "proofreading",
+              point_trees=None):
+    """Write {label: Skeleton} to a WebKnossos NML. Vertices (nm) -> voxel coords.
+
+    point_trees: optional list of node clouds to append, each a dict
+        {'name': str, 'points': (N,3) xyz VOXEL coords, 'color': (r,g,b,a) opt,
+         'connect': bool}. Used for the membrane "fishnet" — nodes a human edits
+        in WKS and the expand stage routes to negative prompts (name-prefixed,
+        e.g. 'membrane_net'). Points are already in voxels, so they are NOT
+        rescaled. connect=True links them into one spanning tree (WebKnossos
+        splits an edgeless cloud into one tree per node on upload).
+    """
     import wknml
     rx = float(res_nm[0])
     trees, nid = [], 1
@@ -98,6 +108,22 @@ def write_nml(skels, res_nm, out_path: str, name: str = "proofreading"):
         nid += len(nodes)
         col = tuple(np.random.rand(3).tolist()) + (1.0,)
         trees.append(wknml.Tree(id=ti, color=col, name=f"neuron_{int(lab)}",
+                                nodes=nodes, edges=edges))
+    for pt in (point_trees or []):
+        pts = np.asarray(pt["points"], dtype=float).reshape(-1, 3)
+        base = nid
+        col = pt.get("color", (1.0, 0.0, 0.0, 1.0))        # membrane net = red
+        nodes = [wknml.Node(id=base + i, position=tuple(float(c) for c in p),
+                            radius=1.0)
+                 for i, p in enumerate(pts)]
+        edges = []
+        if pt.get("connect"):                               # span into one tree
+            from magneton.proofreading.lib.membrane_points import fishnet_edges
+            edges = [wknml.Edge(source=base + int(a), target=base + int(b))
+                     for a, b in fishnet_edges(pts)]
+        nid += len(nodes)
+        trees.append(wknml.Tree(id=len(trees) + 1, color=col,
+                                name=pt.get("name", "membrane_net"),
                                 nodes=nodes, edges=edges))
     nml = wknml.NML(
         parameters=wknml.NMLParameters(name=name, scale=tuple(float(v) for v in res_nm)),

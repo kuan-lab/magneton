@@ -53,3 +53,6 @@ reports/
 
 # External projects
 marmoset_project/
+scratch_*.txt
+wk_upload_out/
+igneous_tasks_morgan_2d/

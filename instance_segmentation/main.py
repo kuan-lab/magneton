@@ -44,6 +44,8 @@ from magneton.instance_segmentation.stages.merge_pools import build_id_pools_par
 from magneton.instance_segmentation.stages.merge_pools_hpc import build_id_pools_parallel_hpc
 from magneton.instance_segmentation.stages.merge_apply import apply_pools_to_global
 from magneton.instance_segmentation.stages.merge_apply_hpc import apply_pools_to_global_hpc
+from magneton.instance_segmentation.stages.merge_supervox import merge_supervox
+from magneton.instance_segmentation.stages.merge_supervox_hpc import merge_supervox_hpc
 from magneton.instance_segmentation.state.checkpoint import load_merge_state
 
 
@@ -268,6 +270,28 @@ def run(args, global_cfg):
             print("Press Enter to return menu.")
             input("> ").strip().lower()
 
+        elif args.stage == "merge-supervox":
+            if not confirm_stage("Merge-Supervox"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Supervox Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                merge_supervox(cfg, stage_cfg)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+
+        elif args.stage == "merge-supervox-hpc":
+            if not confirm_stage("Merge-Supervox-HPC"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Supervox Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                merge_supervox_hpc(cfg, stage_cfg)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+
         elif args.stage == "status":
             cfg = load_config(seg_cfg_path)
             folder_done = cfg["checkpoint"]["segmentation_dir"]
@@ -423,7 +447,7 @@ def run_interactive():
     cfg, cfg_path = load_global_config(cfg_path)
 
     # choice_pool = [str(i) for i in range(10)] + ["h", "help"]
-    choice_pool = [str(i) for i in range(11)]
+    choice_pool = [str(i) for i in range(13)]
 
     while True:
         console.rule("[bold bright_white]Instance Segmentation Menu[/bold bright_white]", style="bold white")
@@ -441,11 +465,13 @@ def run_interactive():
         
         table.add_row("5", "Merge Blocks - Apply", "Apply the global ID pool to all segmentated blocks")
         table.add_row("6", "Merge Blocks - Apply [HPC]", "Apply the global ID pool to all segmentated blocks using HPC resources")
-        
-        table.add_row("7", "Status", "View current segmentation status")
-        table.add_row("8", "Clean", "Remove checkpoints and temp data of segmentation")
-        table.add_row("9", "Modify Global Config", "Modify the global configuration files for each module")
-        table.add_row("10", "View Current Config", "View the global configuration files for each module")
+        table.add_row("7", "Merge Blocks - Supervox", "Stitch supervoxels into a global layer + agglomerate graph (proofreading)")
+        table.add_row("8", "Merge Blocks - Supervox [HPC]", "Stitch supervoxels into a global layer + agglomerate graph using HPC resources")
+
+        table.add_row("9", "Status", "View current segmentation status")
+        table.add_row("10", "Clean", "Remove checkpoints and temp data of segmentation")
+        table.add_row("11", "Modify Global Config", "Modify the global configuration files for each module")
+        table.add_row("12", "View Current Config", "View the global configuration files for each module")
         table.add_row("0", "Return", "Return to main menu")
         # table.add_row("h", "Help", "Function description")
 
@@ -460,13 +486,13 @@ def run_interactive():
             console.print("[yellow]Exit Instance Segmentation Pipeline.[/yellow]")
             break
 
-        if choice == "9":
+        if choice == "11":
             cfg, cfg_path = modify_global_config(cfg, cfg_path)
             print("Press Enter to return menu.")
             input("> ").strip().lower()
             continue
 
-        if choice == "10":
+        if choice == "12":
             console.rule("[bold bright_white]Current Global Config[/bold bright_white]", style="bright_cyan")
             config_table = Table(
                     box=box.SIMPLE,
@@ -511,8 +537,10 @@ def run_interactive():
             "4": "merge-pools-hpc",
             "5": "merge-apply",
             "6": "merge-apply-hpc",
-            "7": "status",
-            "8": "clean",
+            "7": "merge-supervox",
+            "8": "merge-supervox-hpc",
+            "9": "status",
+            "10": "clean",
         }
         args.stage = mapping.get(choice)
         args.debug = False
@@ -541,6 +569,8 @@ def main():
             "segmentation-hpc",
             "merge-pools",
             "merge-apply",
+            "merge-supervox",
+            "merge-supervox-hpc",
             "tools",
             "status",
             "clean",

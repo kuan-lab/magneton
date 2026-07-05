@@ -58,9 +58,46 @@ def calculate_memory_target(num_workers):
         return 5_000_000_000
 
 
+def _restrict_tasks_to_bounds(tasks, bounds, shape):
+    """Restrict an igneous task iterator to an ROI sub-region in-place.
+
+    `create_meshing_tasks` returns a FinelyDividedTaskIterator whose grid is
+    driven by `tasks.bounds` (the full volume's mip-bounds). The installed
+    igneous (4.27) has no `bounds=` arg, so we override the iterator's bounds
+    to the ROI: it then tiles only the ROI while the task() closure still emits
+    correct absolute offsets. `bounds` is a cloudvolume Bbox in the SAME voxel
+    space as `tasks.bounds` (the mesh mip). The ROI is snapped outward to the
+    task-`shape` grid (relative to the volume origin) so cells align and fully
+    cover the ROI, then clipped to the volume.
+    """
+    import numpy as np
+    from cloudvolume import Bbox
+    from igneous.task_creation.common import num_tasks
+
+    sh = np.array(shape)
+    vol_min = np.array(tasks.bounds.minpt)
+    vol_max = np.array(tasks.bounds.maxpt)
+    rmin = np.array(bounds.minpt)
+    rmax = np.array(bounds.maxpt)
+    mn = vol_min + ((rmin - vol_min) // sh) * sh
+    mx = vol_min + np.ceil((rmax - vol_min) / sh).astype(int) * sh
+    mn = np.maximum(mn, vol_min)
+    mx = np.minimum(mx, vol_max)
+    roi = Bbox(mn.tolist(), mx.tolist())
+    tasks.bounds = roi
+    tasks.start = 0
+    tasks.end = num_tasks(roi, shape)
+    print(f"[BOUNDS] meshing restricted to {roi} -> {tasks.end} tasks")
+    return tasks
+
+
 def create_meshing_queue(queuepath, source_path, mip, shape, simplification,
-                         max_simplification_error, dust_threshold):
-    """Create meshing tasks and enqueue them."""
+                         max_simplification_error, dust_threshold, bounds=None):
+    """Create meshing tasks and enqueue them.
+
+    bounds: optional cloudvolume Bbox (in mesh-`mip` voxel coords) to restrict
+    meshing to an ROI. None = whole declared volume.
+    """
     tq = TaskQueue('fq://' + queuepath)
 
     tasks = tc.create_meshing_tasks(
@@ -75,6 +112,8 @@ def create_meshing_queue(queuepath, source_path, mip, shape, simplification,
         spatial_index=True,
         compress=False,
     )
+    if bounds is not None:
+        tasks = _restrict_tasks_to_bounds(tasks, bounds, shape)
     tq.insert(tasks)
     tq.rezero()
     total = len(tasks)
@@ -196,6 +235,15 @@ def mesh_prec(cfg):
     dust_threshold = mesh_cfg.get("dust_threshold", None)
     num_workers = mesh_cfg.get("num_workers", 16)
 
+    # Optional ROI to restrict meshing. Project-standard ZYX [z1,z2,y1,y2,x1,x2]
+    # in mesh-`mip` voxel coords (matches inference ROI / block.roi). None=full.
+    bounds_cfg = mesh_cfg.get("bounds", None)
+    bounds = None
+    if bounds_cfg is not None:
+        from cloudvolume import Bbox
+        z1, z2, y1, y2, x1, x2 = bounds_cfg
+        bounds = Bbox([x1, y1, z1], [x2, y2, z2])  # igneous is XYZ
+
     vol_name = os.path.basename(source_path.rstrip("/"))
     queuepath_mesh = os.path.join(queuepath_base, vol_name + "_mesh")
     queuepath_manifest = os.path.join(queuepath_base, vol_name + "_mesh_manifest")
@@ -210,6 +258,7 @@ def mesh_prec(cfg):
     total_mesh = create_meshing_queue(
         queuepath_mesh, source_path, mip, shape,
         simplification, max_simplification_error, dust_threshold,
+        bounds=bounds,
     )
     run_multiple_workers(
         queuepath=queuepath_mesh,

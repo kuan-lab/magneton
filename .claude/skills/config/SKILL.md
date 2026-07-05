@@ -41,6 +41,8 @@ This is the **authoritative static registry**. If a new pipeline function/stage/
 
 Note: one instance_segmentation config file holds **both** the segmentation stage and the merge stage (two top-level sections: `segmentation_stage` and `merge_stage`). They are not separate files.
 
+Note: **supervoxel proofreading** is a toggle on this same config (`segmentation_stage.emit_supervoxels: true`, neuron mode). After the normal seg → merge-pools → merge-apply chain, a `merge-supervox` stage (menu option 7, or `merge-supervox-hpc` option 8) stitches the per-block supervoxels into a global supervoxel precomputed layer + an agglomerate npz bundle (→ WebKnossos Zarr-v3 attachment via `emit_agglomerate_zarr.py`). It reuses the same block/core machinery; nodes/positions/labels come from the assembled volume. Reference: `config_fib_b_neuron_sv.yaml` (full) / `config_fib_b_neuron_svtest.yaml` (crop).
+
 ### Analysis (per-instance morphometrics)
 
 | Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
@@ -53,7 +55,7 @@ Note: organelle-agnostic (mito, bouton, synapse, …) — the same per-instance 
 
 | Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
 |---|---|---|---|
-| `proofreading` / `membrane` / `skeletonize` / `expand` / `nninteractive` | `proofreading/configs/` | `config_fib_b_neuron_fennel.yaml` | `proofreading.main` |
+| `proofreading` / `membrane` / `skeletonize` / `expand` / `nninteractive` / `supervoxel` | `proofreading/configs/` | `config_fib_b_neuron_fennel.yaml` | `proofreading.main` |
 
 Note: one file holds all proofreading stages as top-level sections (key order doesn't matter — stages are keyed by name):
 - **`membrane_stage`** (WORKING, the current method) — crop EM + affinity from precomputed → threshold affinity to a binary membrane → upload EM + membrane to WebKnossos in one command, then correct the membrane in the WKS UI. Crop+threshold run in the `magneton` env; the upload shells out to the `yf354` env (webknossos-libs). Runs interactively (no SLURM job).
@@ -127,8 +129,9 @@ When generating a config, walk the fields below for the chosen stage. Fields alr
 
 ### crop
 - `crop.input`, `crop.output`
-- `crop.coords` — `[x1, x2, y1, y2, z1, z2]`
+- `crop.coords` — `[x1, x2, y1, y2, z1, z2]` (in `crop.mip`'s voxels for precomputed input)
 - `crop.h5_key` (only if h5 input)
+- `crop.mip` — precomputed input mip to read (default 0; ignored for tif/h5)
 - `crop.resolution` — `[x, y, z]` nm
 - `hpc.*`
 
@@ -160,6 +163,7 @@ When generating a config, walk the fields below for the chosen stage. Fields alr
 - `SOLVER.LR_SCHEDULER_NAME`, `SOLVER.BASE_LR`, `SOLVER.ITERATION_*`, `SOLVER.SAMPLES_PER_BATCH`
 - `MONITOR.ITERATION_NUM`
 - `INFERENCE.*` — inference sub-block (INPUT_SIZE, OUTPUT_SIZE, IMAGE_NAME, OUTPUT_PATH, OUTPUT_NAME, PAD_SIZE, AUG_MODE, AUG_NUM, STRIDE, SAMPLES_PER_BATCH)
+- `INFERENCE.GEOMETRY.CROP_OUTPUT_TO_ROI` — bool, default `False`. On an ROI inference run: `False` = output spans the full input extent (offset 0), data written sparsely into the ROI (keeps absolute coords aligned for Neuroglancer + the origin-(0,0,0) instance-seg pipeline); `True` = output sized to the ROI with `voxel_offset` = ROI start (clean standalone/shareable affinity, NOT yet consumable by the offset-naive merge pipeline). No effect when ROI is None.
 
 The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a handful of keys that overlay the base — most often `MODEL.ARCHITECTURE`, `MODEL.BLOCK_TYPE`, `DATASET.OUTPUT_PATH`, `INFERENCE.OUTPUT_PATH`.
 
@@ -177,6 +181,8 @@ The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a h
 - `paths.input` — affinity precomputed
 - `paths.output` — global instance output
 - `paths.output_local_base` — per-block output base path
+- `paths.supervox_output` — GLOBAL supervoxel precomputed (supervoxel proofreading; written by merge-supervox)
+- `paths.supervox_agglomerate_npz` — agglomerate npz bundle (nodes/positions/edges/affinity) for the WebKnossos Zarr-v3 attachment
 - `mode.type` — `neuron` (waterz), `mito` (binary_watershed), or `bouton` (binary_watershed + neuron membrane gating)
 - `mode.mito.*` (only if mito): `seed_threshold`, `foreground_threshold`, `min_segment_size`, `seed_min_size`, `remove_small_mode`, `erosion_iters`
 - `mode.bouton.*` (only if bouton): same watershed knobs as mito **plus** membrane gating. **Required** `neuron_ref_path` — a neuron affinity precomputed; voxels where neuron affinity is low (membrane/ECS) get the bouton affinity zeroed *before* watershed, breaking cross-membrane merges. A bouton↔neuron resolution mismatch is auto-handled (reads neuron at its own mip, upsamples; e.g. 8nm neuron vs 4nm bouton). Other knobs: `neuron_aff_threshold` (below this = membrane; **lower = less masking**, fixes over-aggressive splits), `neuron_aff_reduce` (`mean`/`min`/`first`), `dilation_iters` (membrane-constrained rounding of final instances). Boutons are **much larger than mito**, so `min_segment_size`/`seed_min_size` must be far larger than mito values. fib_b converged reference (`config_fib_b_bouton_v1.yaml`): seed 0.745, foreground 0.353, erosion_iters 0, dilation_iters 2, neuron_aff_threshold 0.3, seed_min_size 3000, min_segment_size 15000.
@@ -191,12 +197,17 @@ The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a h
 - `segmentation_stage.supervoxel` — `3d` (isotropic) or `2d` (serial section)
 - `segmentation_stage.interior_threshold`, `min_distance` (3D supervoxel only)
 - `segmentation_stage.method`, `merge_function` (2D supervoxel only)
+- `segmentation_stage.emit_supervoxels` — bool, NEURON mode only. Keep the pre-agglomeration watershed fragments per block AND emit a per-block within-core RAG partial (`sv_rag_{i}.npz` in `metadata_dir`) — the inputs for supervoxel proofreading. The RAG is computed in the seg stage (where waterz already has fragments + affinity in memory), so merge-supervox never re-reads the affinity.
+- `segmentation_stage.aff_channel_order` — `zyx`/`xyz`; PyTC affinity channel order for the RAG edge weights. MUST match `merge_stage.aff_channel_order`.
 - `segmentation_stage.hpc.*` + `blocks_per_job`, `workers_per_job`, `hpc_num`
 - `merge_stage.metadata_dir` (same `magneton/metadata/seg_metadata_<volume>` dir as segmentation_stage), `workers`, `mip`
 - `merge_stage.min_overlap_vox`, `min_frac_local`, `min_frac_global`, `max_voxel_size`
 - `merge_stage.require_recip`, `allow_union_amb`, `dom_ratio`, `min_iou`
 - `merge_stage.export_tif.enable`, `path`, `max_slices`
 - `merge_stage.hpc.*` + `blocks_per_job`, `workers_per_job`
+- `merge_stage.aff_channel_order` — `zyx`/`xyz`; affinity channel order for merge-supervox seam-edge weights (must match `segmentation_stage.aff_channel_order`)
+- `merge_stage.supervox_workers` — merge-supervox internal ProcessPool size (match `hpc_supervox.cpus`)
+- `merge_stage.hpc_supervox.*` — **merge-supervox** HPC block. Unlike the array-based `merge.hpc`, this is a SINGLE multi-core node job (the dense-id reduce is a global barrier); `cpus` sizes the pool. Falls back to `merge_stage.hpc` if absent. `job_dir_supervox` for its own logs.
 
 ### analysis (per-instance morphometrics)
 - `paths.input` — high-mip instance precomputed volume (`file://...`)

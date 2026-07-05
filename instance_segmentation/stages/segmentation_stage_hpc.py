@@ -14,6 +14,26 @@ def _ensure_dir(p: str):
     Path(p).mkdir(parents=True, exist_ok=True)
 
 
+def _clear_state(global_cfg, stage_cfg):
+    """Remove checkpoint .done flags + block metadata so a restart truly re-runs.
+
+    Without this, restart only re-lists blocks in the manifest, but run_local_shard
+    re-skips any block whose .done still exists (is_local_done) — so nothing re-runs.
+    Also drops stale sv_rag_*.npz partials (schema/content may have changed).
+    """
+    local_ckpt_dir = global_cfg["checkpoint"]["segmentation_dir"]
+    metadata_dir = stage_cfg.get("metadata_dir", "./metadata/local_metadata")
+    removed = 0
+    for d in (local_ckpt_dir, metadata_dir):
+        if not os.path.isdir(d):
+            continue
+        for fn in os.listdir(d):
+            if fn.endswith((".done", ".json", ".npz")):
+                os.remove(os.path.join(d, fn)); removed += 1
+    print(f"[INFO] restart: cleared {removed} checkpoint/metadata files "
+          f"({local_ckpt_dir}, {metadata_dir})")
+
+
 def _pending_block_indices(cfg, restart=False):
     """Compute all blocks and filter out completed blocks (depending on checkpoints/local/*.done)"""
     input_path = cfg["paths"]["input"]
@@ -56,6 +76,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     cpus = hpc.get("cpus", "8")
     hpc_num = hpc.get("hpc_num", "1")
     partition = hpc.get("partition", None)
+    gres = hpc.get("gres", None)      # e.g. "gpu:1" to borrow CPU cores on a GPU-partition node
     # account = hpc.get("account", None)
     # qos = hpc.get("qos", None)
     extra_modules = hpc.get("extra_modules", [])
@@ -80,6 +101,7 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         f"#SBATCH --error={log_dir}/%x_%A_%a.err",
     ]
     if partition:   lines.append(f"#SBATCH --partition={partition}")
+    if gres:        lines.append(f"#SBATCH --gres={gres}")
     # if account:     lines.append(f"#SBATCH --account={account}")
     # if qos:         lines.append(f"#SBATCH --qos={qos}")
 
@@ -129,6 +151,11 @@ def submit_local_hpc(global_cfg, stage_cfg, restart=False, dry_run=False):
     scheduler = hpc.get("scheduler", "slurm").lower()
     job_dir = hpc.get("job_dir", "magneton/jobs/local")
     blocks_per_job = int(hpc.get("blocks_per_job", 8))
+
+    # On restart, actually delete .done/metadata so run_local_shard re-runs blocks
+    # (it independently re-skips .done blocks, so restart must clear them on disk).
+    if restart:
+        _clear_state(global_cfg, stage_cfg)
 
     # Calculate the blocks to be processed
     pending = _pending_block_indices(global_cfg, restart=restart)

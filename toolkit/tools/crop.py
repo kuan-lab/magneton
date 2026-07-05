@@ -26,7 +26,7 @@ def _detect_filetype(path):
     )
 
 
-def _get_volume_shape(path, filetype, h5_key="vol0"):
+def _get_volume_shape(path, filetype, h5_key="vol0", mip=0):
     """Get volume shape as (Z, Y, X) without loading data."""
     if filetype == "tif":
         with tiff.TiffFile(path) as t:
@@ -36,7 +36,7 @@ def _get_volume_shape(path, filetype, h5_key="vol0"):
         with h5py.File(path, "r") as f:
             shape = f[h5_key].shape
     elif filetype == "precomputed":
-        vol = CloudVolume(path, mip=0, fill_missing=True)
+        vol = CloudVolume(path, mip=mip, fill_missing=True)
         # vol.shape is (X, Y, Z, C) — return (Z, Y, X)
         shape = (vol.shape[2], vol.shape[1], vol.shape[0])
     return shape
@@ -83,7 +83,7 @@ def _check_bounds(coords, shape):
         )
 
 
-def _read_crop(path, filetype, coords, h5_key="vol0"):
+def _read_crop(path, filetype, coords, h5_key="vol0", mip=0):
     """Read a cropped ROI from the given path.
 
     Args:
@@ -91,6 +91,8 @@ def _read_crop(path, filetype, coords, h5_key="vol0"):
         filetype: one of 'tif', 'h5', 'precomputed'
         coords: [z1, z2, y1, y2, x1, x2]
         h5_key: dataset key for h5 files
+        mip: input precomputed mip to read (coords are in this mip's voxels;
+             ignored for tif/h5)
 
     Returns:
         numpy array in (Z, Y, X) order
@@ -98,7 +100,7 @@ def _read_crop(path, filetype, coords, h5_key="vol0"):
     z1, z2, y1, y2, x1, x2 = coords
 
     # Bounds check before loading data
-    shape = _get_volume_shape(path, filetype, h5_key=h5_key)
+    shape = _get_volume_shape(path, filetype, h5_key=h5_key, mip=mip)
     print(f"[INFO] Volume shape (ZYX): {shape}")
     _check_bounds(coords, shape)
 
@@ -114,8 +116,8 @@ def _read_crop(path, filetype, coords, h5_key="vol0"):
             cropped = ds[z1:z2, y1:y2, x1:x2]
 
     elif filetype == "precomputed":
-        vol = CloudVolume(path, mip=0, fill_missing=True)
-        print(f"[INFO] Read precomputed: shape={vol.shape}, dtype={vol.dtype}")
+        vol = CloudVolume(path, mip=mip, fill_missing=True)
+        print(f"[INFO] Read precomputed (mip={mip}): shape={vol.shape}, dtype={vol.dtype}")
         # CloudVolume indexing is (X, Y, Z)
         data = vol[x1:x2, y1:y2, z1:z2]
         # data shape is (X, Y, Z, C) — squeeze channel and transpose to (Z, Y, X)
@@ -186,15 +188,15 @@ def _write_crop(data, path, filetype, h5_key="vol0", resolution=None):
         print(f"[INFO] Saved precomputed: {path}, volume_size={volume_size}")
 
 
-def _crop_volume(input_path, output_path, coords, h5_key="vol0", resolution=None):
+def _crop_volume(input_path, output_path, coords, h5_key="vol0", resolution=None, mip=0):
     """Crop a region from input and save to output."""
     in_type = _detect_filetype(input_path)
     out_type = _detect_filetype(output_path)
-    print(f"[INFO] Input:  {input_path} ({in_type})")
+    print(f"[INFO] Input:  {input_path} ({in_type}, mip={mip})")
     print(f"[INFO] Output: {output_path} ({out_type})")
     print(f"[INFO] Coords: z=[{coords[0]}:{coords[1]}], y=[{coords[2]}:{coords[3]}], x=[{coords[4]}:{coords[5]}]")
 
-    data = _read_crop(input_path, in_type, coords, h5_key=h5_key)
+    data = _read_crop(input_path, in_type, coords, h5_key=h5_key, mip=mip)
     _write_crop(data, output_path, out_type, h5_key=h5_key, resolution=resolution)
     print("[INFO] Crop completed.")
 
@@ -207,7 +209,8 @@ def crop_volume(cfg):
     coords = crop_cfg["coords"]
     h5_key = crop_cfg.get("h5_key", "vol0")
     resolution = crop_cfg.get("resolution", None)
-    _crop_volume(input_path, output_path, coords, h5_key=h5_key, resolution=resolution)
+    mip = crop_cfg.get("mip", 0)
+    _crop_volume(input_path, output_path, coords, h5_key=h5_key, resolution=resolution, mip=mip)
 
 
 def main():

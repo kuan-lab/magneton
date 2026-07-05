@@ -124,10 +124,14 @@ def run_waterz_block(
     min_distance=3,
     sv_2d='maxima_distance',
     merge_function=None,
+    return_fragments=False,
 ):
     """
     Perform waterz partitioning within a block
     aff_block_czyx: (c,z,y,x)
+    return_fragments: if True, return (supervox, seg) — the pre-agglomeration
+        watershed supervoxels (uint64) alongside the agglomerated seg — for
+        supervoxel-based proofreading (WebKnossos agglomerate files). Both (z,y,x).
     """
     t_total = time.time()
     aff = aff_block_czyx.astype(np.float32)
@@ -167,7 +171,8 @@ def run_waterz_block(
         raise RuntimeError("Supervoxle should be 3d or 2d.")
     if supervox.max() == 0:
         print("Watershed produced no segments.")
-        return np.zeros_like(B, dtype=np.uint32)
+        empty = np.zeros_like(B, dtype=np.uint32)
+        return (empty.astype(np.uint64), [empty]) if return_fragments else empty
         # raise RuntimeError("Watershed produced no segments.")
 
     t4 = time.time()
@@ -176,6 +181,10 @@ def run_waterz_block(
     t5 = time.time()
     num_supervox = int(supervox.max())
     print(f"[TIMER] compact_labels: {t5 - t4:.2f}s, num_supervoxels: {num_supervox}")
+
+    # waterz agglomerate() mutates `fragments` IN PLACE, so snapshot the watershed
+    # supervoxels first if the caller wants them back.
+    supervox_frozen = supervox.copy() if return_fragments else None
 
     # Run waterz aggregation
     t6 = time.time()
@@ -198,4 +207,10 @@ def run_waterz_block(
     seg = outs[0] if isinstance(outs, list) else next(outs)
     t_end = time.time()
     print(f"[TIMER] TOTAL run_waterz_block: {t_end - t_total:.2f}s")
+    if return_fragments:
+        # return the watershed supervoxels + ONE agglomeration per threshold (the
+        # generator yields outs aligned with seg_thresholds), for per-threshold
+        # WebKnossos agglomerate files.
+        return (supervox_frozen.astype(np.uint64, copy=False),
+                [o.astype(np.uint32, copy=False) for o in outs])
     return seg.astype(np.uint32, copy=False)

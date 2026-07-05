@@ -156,9 +156,15 @@ def _run_precomputed(args, cfg, device, mode):
     roi = list(geom.ROI) if geom.ROI is not None else None
     vol_shape_zyx, vol_offset_zyx = apply_roi(
         vol_shape_zyx, vol_offset_zyx, roi, output_chunk_size=chunk_size)
+    # Optionally size the output to the ROI (offset = ROI start) instead of the
+    # full input extent. ZYX -> XYZ for CloudVolume. See GEOMETRY.CROP_OUTPUT_TO_ROI.
+    crop_out = bool(getattr(geom, "CROP_OUTPUT_TO_ROI", False)) and roi is not None
+    out_size_xyz = (vol_shape_zyx[2], vol_shape_zyx[1], vol_shape_zyx[0]) if crop_out else None
+    out_offset_xyz = (vol_offset_zyx[2], vol_offset_zyx[1], vol_offset_zyx[0]) if crop_out else None
     init_output_volume(input_url, output_url, mip=mip,
                        num_channels=int(cfg.MODEL.OUT_PLANES),
-                       dtype="uint8", chunk_size=chunk_size)
+                       dtype="uint8", chunk_size=chunk_size,
+                       output_size_xyz=out_size_xyz, output_offset_xyz=out_offset_xyz)
 
     in_cv = CloudVolume(input_url, mip=mip, bounded=False, fill_missing=True,
                         progress=False)
