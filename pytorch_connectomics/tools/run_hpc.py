@@ -71,6 +71,66 @@ def _gen_chunk_configs(config_base, configs_save_path, input_folder, chunks_per_
     return num_batches
 
 
+
+
+_AUTO_RESUME_TMPL = r'''CKPT="@@CKPT@@"
+MAX_RESTARTS=@@MAXR@@
+ITER_TOTAL=@@TOTAL@@
+if [ "${SLURM_RESTART_COUNT:-0}" -gt 0 ]; then
+  if [ "${SLURM_RESTART_COUNT}" -gt "${MAX_RESTARTS}" ]; then
+    echo "[auto-resume] restart #${SLURM_RESTART_COUNT} exceeds max ${MAX_RESTARTS}; not resuming again." >&2
+    exit 1
+  fi
+  OUTDIR=$(dirname "$CKPT")
+  # Sort by iteration NUMBER, not lexically: a plain ls sorts checkpoint_95000
+  # after checkpoint_195000, which would silently rewind the run.
+  CKPT_LIST=$(ls -1 "$OUTDIR"/checkpoint_*.pth.tar 2>/dev/null \
+              | sed 's|.*/checkpoint_0*\([0-9][0-9]*\)\.pth\.tar$|\1 &|' \
+              | sort -n -k1,1 | cut -d' ' -f2-)
+  N=$(printf '%s\n' "$CKPT_LIST" | grep -c .)
+  if [ "$N" -gt 0 ]; then
+    NEWEST=$(printf '%s\n' "$CKPT_LIST" | tail -1)
+    # Preemption can kill the job mid-torch.save. Checkpoints for one arm vary
+    # by <1KB, so a >1% shortfall vs the previous one means a partial write.
+    if [ "$N" -gt 1 ]; then
+      PREV=$(printf '%s\n' "$CKPT_LIST" | tail -2 | head -1)
+      SZ_NEW=$(stat -c%s "$NEWEST" 2>/dev/null || echo 0)
+      SZ_PREV=$(stat -c%s "$PREV" 2>/dev/null || echo 0)
+      if [ "$SZ_NEW" -lt $(( SZ_PREV * 99 / 100 )) ]; then
+        echo "[auto-resume] $NEWEST looks truncated ($SZ_NEW vs $SZ_PREV); using $PREV" >&2
+        NEWEST="$PREV"
+      fi
+    fi
+    CKPT="$NEWEST"
+  fi
+  # 10# forces base 10: bash's test treats a leading zero as octal, so
+  # checkpoint_05000 would otherwise compare as 2560.
+  ITER=$(basename "$CKPT" | sed 's|checkpoint_\([0-9][0-9]*\)\.pth\.tar|\1|')
+  ITER=$((10#$ITER))
+  if [ "$ITER_TOTAL" -gt 0 ] && [ "$ITER" -ge "$ITER_TOTAL" ]; then
+    echo "[auto-resume] checkpoint at $ITER >= ITERATION_TOTAL $ITER_TOTAL; already complete."
+    exit 0
+  fi
+  echo "[auto-resume] restart #${SLURM_RESTART_COUNT}: resuming from $CKPT (iter $ITER)"
+fi
+'''
+
+def _auto_resume_bash(checkpoint_path, iter_total, max_restarts):
+    """Bash preamble choosing the checkpoint for a fine-tune-hpc job.
+
+    A first run (SLURM_RESTART_COUNT unset) always honours the checkpoint
+    pinned in config.yaml, so a deliberate "resume from an older one" choice
+    is never silently overridden. Only an involuntary requeue -- preemption or
+    node failure -- walks forward to the newest checkpoint on disk.
+    """
+    return (_AUTO_RESUME_TMPL
+            .replace("@@CKPT@@", str(checkpoint_path))
+            .replace("@@MAXR@@", str(max_restarts))
+            .replace("@@TOTAL@@", str(iter_total))
+            .rstrip("\n")
+            .split("\n"))
+
+
 def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     hpc = stage_cfg["hpc"]
     python_bin = hpc.get("python_bin", "python")
@@ -81,6 +141,11 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
     constraint = hpc.get("constraint", None)
     partition = hpc.get("partition", None)
     qos = hpc.get("qos", None)
+    # Auto-resume on SLURM requeue (preemption / node failure). Opt-in per
+    # hpc config. Only meaningful for fine-tune-hpc, which is the only stage
+    # that both consumes a checkpoint and writes new ones.
+    auto_resume = bool(hpc.get("auto_resume", False))
+    max_restarts = int(hpc.get("max_restarts", 5))
     # account = hpc.get("account", None)
     extra_modules = hpc.get("extra_modules", [])
 
@@ -105,6 +170,20 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         global_cfgs.get("affinity_prediction", {})
                 .get("checkpoint", "magneton/pytorch_connectomics/configs/checkpoint.yaml")
     )
+
+    # ITERATION_TOTAL is baked into the resume block so a requeue that lands
+    # after training already finished exits cleanly instead of running a
+    # degenerate zero-iteration job. Read before cfg_base_path can be
+    # reassigned to a per-task temp config by the mutil_jobs branch.
+    iter_total = 0
+    if auto_resume and cfg.stage == "fine-tune-hpc":
+        try:
+            with open(cfg_base_path) as f:
+                iter_total = int((yaml.safe_load(f) or {})
+                                 .get("SOLVER", {}).get("ITERATION_TOTAL", 0))
+        except Exception as e:
+            print(f"[WARN] auto_resume: could not read ITERATION_TOTAL ({e}); "
+                  f"completion guard disabled")
 
     # Direct-precomputed inference: detect by reading cfg-base's IMAGE_NAME.
     # If precomputed, replace temp-config generation with block-grid sizing
@@ -208,6 +287,11 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
             f"#SBATCH --output={log_dir}/%x_%A_%a.out",
             f"#SBATCH --error={log_dir}/%x_%A_%a.err",
         ]
+    # A requeued job keeps its job ID, so %A resolves to the same log file;
+    # the default open mode would truncate the preempted attempt's log away.
+    if auto_resume and cfg.stage == "fine-tune-hpc":
+        lines.append("#SBATCH --requeue")
+        lines.append("#SBATCH --open-mode=append")
     if partition:   lines.append(f"#SBATCH --partition={partition}")
     if constraint: lines.append(f'#SBATCH --constraint="{constraint}"')
     if qos:         lines.append(f"#SBATCH --qos={qos}")
@@ -228,9 +312,14 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
             f"--config-file {cfg_file_path} --config-base {cfg_base_path}"
         ]
     elif cfg.stage == "fine-tune-hpc":
+        if auto_resume:
+            lines += _auto_resume_bash(checkpoint_path, iter_total, max_restarts)
+            _ckpt_arg = '"$CKPT"'
+        else:
+            _ckpt_arg = checkpoint_path
         lines += [
             f"{python_bin} -u -m magneton.pytorch_connectomics.tools.run "
-            f"--config-file {cfg_file_path} --config-base {cfg_base_path} --checkpoint {checkpoint_path}"
+            f"--config-file {cfg_file_path} --config-base {cfg_base_path} --checkpoint {_ckpt_arg}"
         ]
     elif precomputed_flag:
         lines += [
