@@ -25,6 +25,15 @@ def seg_to_weight(target, wopts, mask=None, seg=None):
             assert seg is not None
             _, w0, w1 = wopt.split('-')
             out[wid] = weight_unet3d(seg, float(w0), float(w1))
+        elif wopt[0] == '3':  # 3: border-margin mask, '3-<mz>-<my>-<mx>'
+            # Zeroes a margin on every face. Used for local shape descriptors:
+            # the LSD Gaussian window extends ~sigma beyond the patch, so
+            # descriptors within sigma of a face are computed from truncated
+            # objects and must not contribute to the loss.
+            mz, my, mx = [int(v) for v in wopt.split('-')[1:]]
+            w = np.zeros(target.shape[1:], np.float32)
+            w[mz:w.shape[0] - mz, my:w.shape[1] - my, mx:w.shape[2] - mx] = 1.0
+            out[wid] = w[np.newaxis]
         elif mask is not None:  # valid region only
             out[wid] = (mask!=0).astype(np.float32)[np.newaxis, :]
         else:  # no weight map

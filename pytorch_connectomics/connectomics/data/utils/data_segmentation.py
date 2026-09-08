@@ -295,6 +295,81 @@ def seg2inst_edt(label, topt):
                         quantize=bool(int(quant)), padding=bool(int(padding)), erosion=int(erosion))
 
 
+_LSD_DESCRIPTOR_FN = None
+
+
+def _load_lsd_descriptor_fn():
+    """Return ``lsd.train.local_shape_descriptor.get_local_shape_descriptors``.
+
+    Loaded from its file directly rather than via ``import lsd.train...``:
+    ``lsd/train/__init__.py`` imports ``lsd.train.gp``, which subclasses
+    gunpowder's ``BatchFilter`` at module scope. We deliberately install
+    ``lsds`` with ``--no-deps`` (no gunpowder/zarr/numcodecs/dask), because
+    those pull a numpy 2.x build and waterz is compiled against the numpy 1.x
+    C-ABI -- mixing them raises "numpy.dtype size changed" (2026-08-27).
+
+    The descriptor module itself needs only ``gp.Coordinate`` / ``gp.Roi``,
+    which are re-exports of the pure-python ``funlib.geometry``, so a small
+    stub satisfies it. A real gunpowder, if already imported, takes precedence.
+
+    Cached: this is called once per training patch.
+    """
+    global _LSD_DESCRIPTOR_FN
+    if _LSD_DESCRIPTOR_FN is not None:
+        return _LSD_DESCRIPTOR_FN
+
+    import os
+    import sys
+    import types
+    import importlib.util
+
+    _HINT = ("The 'L' (local shape descriptor) target option needs 'lsds' and "
+             "'funlib.geometry'. Install them WITHOUT dependencies -- pulling "
+             "gunpowder/zarr/numcodecs upgrades numpy to 2.x and breaks "
+             "waterz's numpy 1.x C-ABI:\n"
+             "    python -m pip install --no-deps lsds funlib.geometry")
+
+    if 'gunpowder' not in sys.modules:
+        try:
+            from funlib.geometry import Coordinate, Roi
+        except ImportError as exc:
+            raise ImportError(_HINT) from exc
+        stub = types.ModuleType('gunpowder')
+        stub.Coordinate, stub.Roi = Coordinate, Roi
+        sys.modules['gunpowder'] = stub
+
+    lsd_spec = importlib.util.find_spec('lsd')  # does not execute lsd/__init__
+    if lsd_spec is None or lsd_spec.origin is None:
+        raise ImportError(_HINT)
+    path = os.path.join(os.path.dirname(lsd_spec.origin),
+                        'train', 'local_shape_descriptor.py')
+    spec = importlib.util.spec_from_file_location(
+        '_lsd_local_shape_descriptor', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    _LSD_DESCRIPTOR_FN = module.get_local_shape_descriptors
+    return _LSD_DESCRIPTOR_FN
+
+
+def seg2lsd(label: np.ndarray, sigma, downsample: int = 1) -> np.ndarray:
+    """10-channel local shape descriptors (Sheridan et al., Nat Methods 2023).
+
+    Auxiliary target for MTLSD. ``sigma`` is given in VOXELS (the lsds package
+    defaults ``voxel_size`` to 1 along every axis). Returns float32 in [0, 1]
+    with shape (10, z, y, x) for 3D input.
+
+    ``lsds`` is an OPTIONAL dependency, resolved lazily so that environments
+    without it can still run every other target option.
+    """
+    get_local_shape_descriptors = _load_lsd_descriptor_fn()
+    return get_local_shape_descriptors(
+        segmentation=label.astype(np.uint64),
+        sigma=sigma,
+        downsample=downsample,
+    ).astype(np.float32)
+
+
 def seg_to_targets(
     label_orig: np.ndarray,
     topts: List[str],
@@ -364,6 +439,10 @@ def seg_to_targets(
                 out[tid] = distance[np.newaxis, :].astype(np.float32)
         elif topt[0] == '9':  # generic semantic segmentation
             out[tid] = label.astype(np.int64)
+        elif topt[0] == 'L':  # local shape descriptors (MTLSD)
+            # 'L-<sigma_z>-<sigma_y>-<sigma_x>-<downsample>', sigma in VOXELS
+            _, sz, sy, sx, ds = topt.split('-')
+            out[tid] = seg2lsd(label, (int(sz), int(sy), int(sx)), int(ds))
         else:
             raise NameError("Target option %s is not valid!" % topt[0])
 

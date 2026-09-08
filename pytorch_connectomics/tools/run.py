@@ -161,8 +161,11 @@ def _run_precomputed(args, cfg, device, mode):
     crop_out = bool(getattr(geom, "CROP_OUTPUT_TO_ROI", False)) and roi is not None
     out_size_xyz = (vol_shape_zyx[2], vol_shape_zyx[1], vol_shape_zyx[0]) if crop_out else None
     out_offset_xyz = (vol_offset_zyx[2], vol_offset_zyx[1], vol_offset_zyx[0]) if crop_out else None
+    # MTLSD writes 13 channels but only the first 3 (affinity) go downstream.
+    n_out = int(getattr(cfg.INFERENCE, "OUTPUT_CHANNELS", None)
+                or cfg.MODEL.OUT_PLANES)
     init_output_volume(input_url, output_url, mip=mip,
-                       num_channels=int(cfg.MODEL.OUT_PLANES),
+                       num_channels=n_out,
                        dtype="uint8", chunk_size=chunk_size,
                        output_size_xyz=out_size_xyz, output_offset_xyz=out_offset_xyz)
 
@@ -236,7 +239,7 @@ def _run_precomputed(args, cfg, device, mode):
             # Crop the read-frame prediction to core_bbox
             oz, oy, ox = cz1 - rz1, cy1 - ry1, cx1 - rx1
             sz, sy, sx = cz2 - cz1, cy2 - cy1, cx2 - cx1
-            core = pred_zyx[:, oz:oz+sz, oy:oy+sy, ox:ox+sx]
+            core = pred_zyx[:n_out, oz:oz+sz, oy:oy+sy, ox:ox+sx]
 
             # CloudVolume expects (X, Y, Z, C)
             out_xyzc = np.transpose(core, (3, 2, 1, 0))

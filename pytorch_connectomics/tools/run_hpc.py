@@ -135,7 +135,9 @@ def _slurm_script(cfg, stage_cfg, job_dir, array_len):
         vol_shape_zyx, vol_offset_zyx, _ = volume_info_from_cv(_image_name, mip=_mip)
         vol_shape_zyx, vol_offset_zyx = apply_roi(
             vol_shape_zyx, vol_offset_zyx, _roi, output_chunk_size=_chunk)
-        _out_planes = int(_base.get("MODEL", {}).get("OUT_PLANES", 3))
+        # Mirror run.py: MTLSD trims the 10 LSD channels at write time.
+        _out_planes = int(_base.get("INFERENCE", {}).get("OUTPUT_CHANNELS")
+                          or _base.get("MODEL", {}).get("OUT_PLANES", 3))
         # Mirror run.py: optionally size the output to the ROI (offset = ROI
         # start). Must match the worker side or array tasks find a mismatched
         # volume. ZYX -> XYZ. See GEOMETRY.CROP_OUTPUT_TO_ROI.

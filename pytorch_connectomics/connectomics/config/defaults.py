@@ -492,6 +492,12 @@ _C.INFERENCE.UNPAD = True
 # activation for the output for inference and visualization
 _C.INFERENCE.OUTPUT_ACT = ['sigmoid']
 
+# Keep only the first N channels of the prediction when writing output.
+# None => write all MODEL.OUT_PLANES channels (unchanged behaviour).
+# MTLSD sets this to 3 so the 10 LSD channels are dropped and the written
+# affinity volume stays byte-compatible with the instance-seg stage.
+_C.INFERENCE.OUTPUT_CHANNELS = None
+
 _C.INFERENCE.STRIDE = [4, 128, 128]
 
 # Blending function for overlapping inference.

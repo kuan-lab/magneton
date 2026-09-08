@@ -85,6 +85,7 @@ class SplitActivation(object):
         '5': 1, # instance edt (11 channels for quantized)
         '6': 1, # semantic edt
         '7': 2, # diffusion gradients (2d)
+        'L': 10, # local shape descriptors (MTLSD)
         'all': -1 # all remaining channels
     }
 
