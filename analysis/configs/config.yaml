@@ -1,0 +1,33 @@
+# TEMPLATE: per-instance morphometrics (mito / bouton / synapse - any sparse organelle).
+# Copy and edit paths; the root config.yaml 'analysis.main' pointer selects which file runs.
+paths:
+  input:  "file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_b_mito_instances_iso_v1_e4/"
+  output: "file:///gpfs/radev/home/yf354/magneton/analysis/output/fib_b_mito_iso_v1_e4_2026-05-27"
+
+discover_stage:
+  mip: 2                            # 16 nm
+  bbox_halo_mipN: 1                 # ± voxels at the discovery mip (= ±4 vox at mip 0)
+  min_voxel_count_mipN: 1
+
+features:
+  surface_area_method: marching_cubes   # marching_cubes | face_count | sqrt_kernel
+  symmetry_rounding: nearest             # nearest | truncate
+  refine_bbox: true
+  require_center_object: false
+
+instance_stage:
+  mitos_per_task: 100
+  hpc:
+    enable: true
+    scheduler: "slurm"
+    job_dir: "magneton/jobs/analysis_fib_b_mito_iso_v1_e4"
+    python_bin: "python"
+    time: "00:45:00"                # ~2-3x headroom over worst task (~25-35 min); helps backfill on busy queues
+    cpus: 4
+    mem: "15G"                      # per-cpu × 4 cpus = 60G total; 1.25x the 48G that OOM'd on worst mito (seg_id 3303)
+    partition: "gpu"                 # using gpu partition for cpu-only allocation (day was clogged 2026-05-27)
+    batch_num: 16
+    extra_modules: ["StdEnv"]
+    conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+    env: "magneton"
+    work_path: .

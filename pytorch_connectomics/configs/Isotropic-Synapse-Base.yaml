@@ -1,0 +1,114 @@
+SYSTEM:
+  NUM_GPUS: 1
+  NUM_CPUS: 8
+AUGMENTOR:
+  SMOOTH: false
+  ROTATE:
+    ENABLED: true
+  FLIP:
+    ENABLED: true
+  RESCALE:
+    ENABLED: false
+  ELASTIC:
+    ENABLED: false
+  GRAYSCALE:
+    ENABLED: false
+  MISSINGPARTS:
+    ENABLED: false
+  MISSINGSECTION:
+    ENABLED: false
+  MISALIGNMENT:
+    ENABLED: false
+  MOTIONBLUR:
+    ENABLED: false
+  CUTBLUR:
+    ENABLED: false
+  CUTNOISE:
+    ENABLED: true
+    P: 0.3
+MODEL:
+  ARCHITECTURE: unet_3d
+  BLOCK_TYPE: residual_se
+  INPUT_SIZE:
+  - 160
+  - 160
+  - 160
+  OUTPUT_SIZE:
+  - 160
+  - 160
+  - 160
+  IN_PLANES: 1
+  OUT_PLANES: 1
+  TARGET_OPT:
+  - '0'
+  LOSS_OPTION:
+  - - WeightedBCEWithLogitsLoss
+    - DiceLoss
+  LOSS_WEIGHT:
+  - - 1.0
+    - 1.0
+  WEIGHT_OPT:
+  - - '1'
+    - '0'
+  OUTPUT_ACT:
+  - - none
+    - sigmoid
+DATASET:
+  IMAGE_NAME: /gpfs/radev/home/yf354/marmoset_data/synapse_train_images.txt
+  LABEL_NAME: /gpfs/radev/home/yf354/marmoset_data/synapse_train_labels.txt
+  INPUT_PATH: /gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/synapse_gt/
+  OUTPUT_PATH: outputs/Marmoset/synapse/isotropic_v2
+  IS_ISOTROPIC: true
+  PAD_SIZE:
+  - 40
+  - 40
+  - 40
+SOLVER:
+  ITERATION_RESTART: true
+  LR_SCHEDULER_NAME: WarmupCosineLR
+  BASE_LR: 0.0001
+  ITERATION_STEP: 1
+  ITERATION_SAVE: 5000
+  ITERATION_TOTAL: 120000
+  SAMPLES_PER_BATCH: 2
+MONITOR:
+  ITERATION_NUM:
+  - 200
+  - 1000
+INFERENCE:
+  INPUT_SIZE:
+  - 160
+  - 160
+  - 160
+  OUTPUT_SIZE:
+  - 160
+  - 160
+  - 160
+  OUTPUT_ACT:
+  - sigmoid
+  IMAGE_NAME: precomputed://file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/Gaussian-aligned_FIBSEM_Basil_OML_of_DG
+  OUTPUT_PATH: precomputed://file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_b_inference_synapse_v2_test
+  OUTPUT_NAME: result.h5
+  PAD_SIZE:
+  - 40
+  - 40
+  - 40
+  AUG_MODE: min
+  AUG_NUM: None
+  STRIDE:
+  - 80
+  - 80
+  - 80
+  SAMPLES_PER_BATCH: 16
+  GEOMETRY:
+    CORE_SIZE: 512
+    HALO: 32
+    OUTPUT_CHUNK_SIZE: 128
+    MIP: 0
+    ROI:
+    - 208
+    - 368
+    - 1494
+    - 1894
+    - 4182
+    - 4582

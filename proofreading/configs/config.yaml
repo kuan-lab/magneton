@@ -1,0 +1,136 @@
+# TEMPLATE: proofreading - membrane_stage, skeletonize_stage and expand_stage in one file.
+# Copy and edit paths/coords; 'proofreading.main' in the root config.yaml selects the active file.
+# Proofreading pipeline — fennel neuron GT crop.
+#
+# Two proofreading entries:
+#   membrane_stage   (WORKING)        crop EM + affinity -> binary membrane -> WKS, correct in UI.
+#   skeletonize/expand (NOT FUNCTIONING — see bottom)  skeleton -> nnInteractive expand.
+
+paths:
+  # Shared across stages. membrane_stage uses only `output`; the skeleton flow uses all three.
+  # Instance-labeled segmentation to skeletonize. tif OR file://<precomputed>.
+  seg:    "/gpfs/marilyn/pi/kuan/shared/marmoset_project/wk_crops/neuron_myelin_gt/neuron_myelin_fennel_x4042_y3369_z550/neuron_myelin_fennel_x4042_y3369_z550_neuron_seg_v2.tif"
+  # EM used as the nnInteractive image during expansion (tif).
+  em:     "/gpfs/marilyn/pi/kuan/shared/marmoset_project/wk_crops/neuron_myelin_gt/neuron_myelin_fennel_x4042_y3369_z550/neuron_myelin_fennel_x4042_y3369_z550_em.tif"
+  # Work dir for membrane em.tif/membrane.tif (and skeletons.nml + expanded.tif). Shared marmoset storage (home quota is full).
+  output: "/gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/fennel_neuron"
+  # Sub-ROI for fast nnInteractive iteration (skeletonize/net/upload/expand all use it).
+  # [z1,z2,y1,y2,x1,x2] in the seg crop's own voxel space. null -> full 512x512x256.
+  # 128^3 central block: 29 labels / 19 sizable neurons packed together (the flooding
+  # scenario) at 1/32 the volume. seg_roi.tif + em_roi.tif are written to output/.
+  roi: [64, 192, 192, 320, 192, 320]
+
+# ===========================================================================
+# WORKING — membrane-annotation proofreading (no skeleton): crop EM + affinity
+# inference from precomputed -> threshold affinity to a binary membrane -> upload
+# EM + membrane to WebKnossos in one command. Correct the membrane in the WKS UI.
+# Reuses paths.output above as the work dir (writes em.tif + membrane.tif there).
+# ===========================================================================
+membrane_stage:
+  # coords are in the COMMON (post-mip) voxel space — pick em.mip / inference.mip
+  # so both resolve to the SAME resolution over this ROI (inference is 8 nm at its
+  # own mip0; the 4 nm EM source needs mip1 to also be 8 nm). [z1,z2,y1,y2,x1,x2]
+  coords: [550, 806, 3369, 3881, 4042, 4554]      # example: fennel x4042 y3369 z550, 512x512x256 @ 8 nm
+  voxel_size: [8, 8, 8]                            # nm; resolution at the chosen mips (for WKS)
+  inference:
+    path: "file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_f_inference_neuron_v2"
+    mip: 0                       # inference precomputed mip0 is already 8 nm
+    channel_reduce: min          # min | mean(avg) | max — combine affinity channels (min = interior only where ALL high)
+    threshold: 140               # membrane = reduce(aff) < threshold. PRODUCTION value (min/140), swept Apr 2026.
+                                 #   Affinity bimodal (0/255): min 130->11.6M, 140->11.5M nonzero (flat, interchangeable),
+                                 #   235->10.3M, 254->8.3M (cuts into the interior peak -> thinner membrane). avg = tested alt.
+    membrane_value: 255          # value written for membrane voxels (cytoplasm = 0)
+  em:
+    path: "file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/Gaussian-aligned_FIBSEM_Fennel_OML_of_DG"
+    mip: 1                       # 4 nm source -> mip1 = 8 nm to match the inference
+  upload:
+    enable: true                 # false = only write em.tif + membrane.tif, upload later with /wk
+    env: yf354                   # webknossos-libs lives in the yf354 env, not magneton
+    name: null                   # WKS dataset name; null -> membrane_<coords>
+    remote_folder: https://webknossos.org/dashboard/datasets/membrane_test-6a388fae010000d101da50ff          # WKS folder path or 24-hex id; null -> org default
+    out_dir: null                # local wkw scratch; null -> <output>/wk_upload_out
+    cleanup: false               # true = delete the wkw scratch (<out_dir>/<name>) after a successful upload
+    # token: read from $WEBKNOSSOS_TOKEN (never commit a token here)
+
+# ===========================================================================
+# NOT FUNCTIONING — skeleton-driven proofreading (skeletonize -> WKS correct ->
+# nnInteractive expand). The nnInteractive EXPAND step does not work on EM:
+# nnInteractive (trained on CT/MRI + light microscopy) ignores EM membranes and
+# floods across them (one "neuron" covered 86% of the volume), and it ships
+# inference-only so there is no practical finetune path. See the 2026-06-17 lab
+# notebook. The skeletonize -> WebKnossos-correct HALF is validated and kept;
+# only the expansion backend is wrong. Use membrane_stage above instead.
+# ===========================================================================
+skeletonize_stage:
+  source: tif                # tif | precomputed
+  mip: 0                     # used when source == precomputed
+  res_nm: [8.0, 8.0, 8.0]    # voxel size; for precomputed, read from info if null
+  dust_threshold: 100        # drop objects < N voxels
+  parallel: 8                # kimimaro worker procs (intra-node)
+  parallel_chunk_size: 25    # objects per task (lower = less peak mem)
+  fix_branching: true        # accurate branch points (slower)
+  fix_borders: true          # consistent skeletons at block borders
+  # kimimaro TEASAR params — shown with library defaults; THIS is the tuning surface.
+  teasar:
+    scale: 1.5               # invalidation ball r = scale*DBF + const. ↑both = fewer spurs;
+    const: 300               #   ↓both = capture thin processes. Main quality knobs.
+    pdrf_exponent: 4         # boundary penalty (centeredness); ↑ if skeleton hugs walls
+    pdrf_scale: 100000
+    soma_detection_threshold: 750     # special-case big soma blobs; tune if spider-webbing
+    soma_acceptance_threshold: 3500   #   inside cell bodies (set huge to disable soma logic)
+    soma_invalidation_const: 300
+    soma_invalidation_scale: 2
+  # Optional spur/tick pruning after skeletonization (kimimaro.postprocess):
+  postprocess:
+    enable: false
+    tick_threshold: 0        # nm; prune branches shorter than this (0 = off)
+    dust_threshold: 0        # nm path-length; drop tiny skeletons (0 = off)
+  downsample_nodes: 0        # >0 = thin each skeleton by this factor (fewer NML nodes)
+  # Membrane "fishnet" — sparse negative-prompt points appended to the NML as an
+  # edgeless `membrane_net` tree (one draggable node each) for WKS proofreading +
+  # nnInteractive negatives. Affinity source defaults to membrane_stage below.
+  negatives:
+    enable: true
+    source: seg_boundary     # seg_boundary (instance edges of paths.seg — voxel-exact, no coords)
+                             #   | affinity (threshold an aff ROI; needs aligned inference+coords)
+    spacing: 8               # net pitch in voxels; larger = sparser. 128^3 ROI seg-boundary:
+                             #   s8->2.7k pts, s12->1.0k. (full vol: s20->6.6k.) Sweep on WKS.
+    method: grid             # grid (per-block centroid) | first (per-block first voxel)
+    max_points: 0            # >0 = random-subsample cap to keep WKS responsive
+    # affinity source (source==affinity only); null -> inherit membrane_stage's.
+    # NOTE fennel mismatch: seg crop is 4nm but fib_f inference is 8nm-only.
+    inference: null          # {path,mip,channel_reduce,threshold} or null -> membrane_stage.inference
+    coords: null             # [z1,z2,y1,y2,x1,x2] or null -> membrane_stage.coords
+  # Auto-upload EM + seg + skeletons.nml (with the fishnet) to WebKnossos.
+  upload:
+    enable: true
+    env: yf354               # webknossos-libs lives in the yf354 env, not magneton
+    name: null               # WKS dataset name; null -> <output> dir name
+    em: null                 # image tif; null -> paths.em
+    seg: null                # seg-layer tif; null -> paths.seg
+    remote_folder: https://webknossos.org/dashboard/datasets/membrane_test-6a388fae010000d101da50ff
+    out_dir: null            # local wkw scratch; null -> <output>/wk_upload_out
+    # token: read from $WEBKNOSSOS_TOKEN (never commit a token here)
+
+expand_stage:                # EXPERIMENT — does the membrane_net (negative scribble) wall off the flood?
+  nml: null                  # null -> <output>/skeletons.nml (the 128^3 ROI net: neuron_* + membrane_net)
+  em: /gpfs/radev/.marilyn/pi/kuan/shared/marmoset_project/nninteractive_output/fennel_neuron/em_roi.tif
+                             # the CROPPED EM matching the skeletons' frame (NOT the full em.tif)
+  use_negatives: true        # true = add membrane_net as negative scribble; false = baseline (reproduce flood)
+  negative_prefix: membrane_net
+  out_name: expanded_neg.tif # so a use_negatives:false baseline can write expanded_noneg.tif alongside
+  max_neurons: 0             # 0 = all neurons in the crop
+  model_dir: null            # null -> resolve nnInteractive_v1.0 from the HF cache
+  hf_cache: /gpfs/radev/project/kuan/yf354/hf_cache
+  hpc:
+    enable: true
+    partition: gpu
+    constraint: "a100|h100|h200"
+    gpus: 1
+    mem_per_gpu: 64G
+    cpus: 8
+    time: "06:00:00"
+    conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+    env:   /gpfs/radev/project/kuan/yf354/conda_envs/nninteractive
+    work_path: /gpfs/radev/home/yf354     # parent of magneton/ — for -m import + relative config path
+    job_dir: magneton/jobs/proofreading_expand   # SLURM logs (small) live in-repo; big outputs go to shared storage

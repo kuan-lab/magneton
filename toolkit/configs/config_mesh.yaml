@@ -1,0 +1,27 @@
+mesh:
+  flag: true
+  queuepath: magneton/igneous_tasks
+  source_path: /gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_f_neuron_instances/
+  num_workers: 16
+  mip: 0
+  shape:
+  - 448
+  - 448
+  - 448
+  simplification: true
+  max_simplification_error: 40
+  dust_threshold: null
+hpc:
+  enable: true
+  scheduler: slurm
+  job_dir: magneton/jobs/mesh
+  python_bin: python
+  time: "02:00:00"
+  cpus: 16
+  mem: 4G
+  partition: day
+  extra_modules:
+  - StdEnv
+  conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+  env: magneton
+  work_path: .

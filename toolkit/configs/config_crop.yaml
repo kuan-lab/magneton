@@ -1,0 +1,29 @@
+crop:
+  input: file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_c_mito_instances/
+  output: file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_c_mito_6finetune_test/old_instances/
+  coords:
+  - 44
+  - 556
+  - 88
+  - 1112
+  - 4869
+  - 5893
+  h5_key: vol0
+  resolution:
+  - 4
+  - 4
+  - 4
+hpc:
+  enable: true
+  scheduler: slurm
+  job_dir: magneton/jobs/crop
+  python_bin: python
+  time: 00:30:00
+  cpus: 4
+  mem: 16G
+  partition: day
+  extra_modules:
+  - StdEnv
+  conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+  env: magneton
+  work_path: .

@@ -1,0 +1,28 @@
+# TEMPLATE: relational analysis (match instances of one volume against another).
+# Different schema from the morphometrics template in config.yaml.
+# Relational (cross-volume) analysis for fib_b mito / bouton / synapse.
+# Prerequisite: the three per-volume analyses (discover + features + reduce) must
+# have completed — synapse matching reads the synapse bboxes.parquet, and the
+# relational stats read all three morphometrics.parquet. Matching is light enough
+# to run on a login/interactive node (no SLURM needed).
+
+volumes:
+  mito:
+    pc:           "file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_b_mito_instances_lucchi_v1_e10_hf/"
+    analysis_out: "file:///gpfs/radev/home/yf354/magneton/analysis/output/fib_b_mito_lucchi_v1_e10_hf_2026-06-10"
+  bouton:
+    pc:           "file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_b_bouton_instances_v1_sizefilt331k/"
+    analysis_out: "file:///gpfs/radev/home/yf354/magneton/analysis/output/fib_b_bouton_sizefilt331k_2026-06-10"
+  synapse:
+    pc:           "file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_b_synapse_instances_v3/"
+    analysis_out: "file:///gpfs/radev/home/yf354/magneton/analysis/output/fib_b_synapse_v3_2026-06-10"
+
+matching:
+  mito_to_bouton:
+    method: medoid_centroid        # snap mito centroid → nearest real mito voxel → sample bouton label
+    sample_mip: 2                  # 16nm — both volumes read in full here (~1-2 GB each); boutons span many mip-2 voxels so the lookup is reliable
+  synapse_to_bouton:
+    method: direct_overlap         # count bouton voxels under the synapse mask
+    assign: best                   # assign the single max-overlap bouton (0 = touches none)
+
+output: "file:///gpfs/radev/home/yf354/magneton/analysis/output/fib_b_relational_2026-06-10"

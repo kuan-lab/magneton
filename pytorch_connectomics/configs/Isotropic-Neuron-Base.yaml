@@ -1,0 +1,120 @@
+SYSTEM:
+  NUM_GPUS: 1
+  NUM_CPUS: 8
+AUGMENTOR:
+  SMOOTH: false
+  ROTATE:
+    ENABLED: true
+  FLIP:
+    ENABLED: true
+  RESCALE:
+    ENABLED: false
+  ELASTIC:
+    ENABLED: false
+  GRAYSCALE:
+    ENABLED: false
+  MISSINGPARTS:
+    ENABLED: false
+  MISSINGSECTION:
+    ENABLED: false
+  MISALIGNMENT:
+    ENABLED: false
+  MOTIONBLUR:
+    ENABLED: false
+  CUTBLUR:
+    ENABLED: false
+  CUTNOISE:
+    ENABLED: true
+    P: 0.3
+MODEL:
+  BLOCK_TYPE: residual_se
+  INPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  OUTPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  IN_PLANES: 1
+  OUT_PLANES: 3
+  TARGET_OPT:
+  - '2'
+  LABEL_EROSION: None
+  LOSS_OPTION:
+  - - WeightedBCEFocalLoss
+    - DiceLoss
+  LOSS_WEIGHT:
+  - - 1.0
+    - 0.5
+  WEIGHT_OPT:
+  - - '1'
+    - '0'
+  OUTPUT_ACT:
+  - - none
+    - sigmoid
+  FILTERS:
+  - 32
+  - 64
+  - 96
+  - 128
+  - 160
+  NORM_MODE: gn
+DATASET:
+  IMAGE_NAME: neuron_myelin_fennel_x4042_y3369_z550_em.tif
+  LABEL_NAME: neuron_myelin_fennel_x4042_y3369_z550_neuron_seg_v5.tif
+  INPUT_PATH: /gpfs/marilyn/pi/kuan/shared/marmoset_project/wk_crops/neuron_myelin_gt/neuron_myelin_fennel_x4042_y3369_z550/
+  OUTPUT_PATH: outputs/Marmoset/neuron/isotropic_v2
+  IS_ISOTROPIC: true
+  PAD_SIZE:
+  - 32
+  - 32
+  - 32
+SOLVER:
+  LR_SCHEDULER_NAME: WarmupCosineLR
+  BASE_LR: 0.002
+  ITERATION_STEP: 1
+  ITERATION_SAVE: 5000
+  ITERATION_TOTAL: 245000
+  SAMPLES_PER_BATCH: 2
+MONITOR:
+  ITERATION_NUM:
+  - 200
+  - 1000
+INFERENCE:
+  INPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  OUTPUT_SIZE:
+  - 128
+  - 128
+  - 128
+  OUTPUT_ACT:
+  - sigmoid
+  IMAGE_NAME: precomputed://file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/Gaussian-aligned_FIBSEM_Cappa_OML_of_DG
+  OUTPUT_PATH: precomputed://file:///gpfs/marilyn/pi/kuan/shared/marmoset_project/precomputed_outputs/fib_c_inference_neuron_v2_test
+  OUTPUT_NAME: result.h5
+  PAD_SIZE:
+  - 32
+  - 32
+  - 32
+  AUG_MODE: min
+  AUG_NUM: None
+  STRIDE:
+  - 64
+  - 64
+  - 64
+  SAMPLES_PER_BATCH: 16
+  GEOMETRY:
+    CORE_SIZE: 512
+    HALO: 32
+    OUTPUT_CHUNK_SIZE: 128
+    MIP: 1
+    ROI:
+    - 349
+    - 605
+    - 75
+    - 1099
+    - 1621
+    - 2645
