@@ -1,0 +1,11 @@
+segment_props:
+  # Write a Neuroglancer segment-property list for ANY precomputed segmentation
+  # (writes <source_path>/segment_properties/info and points the volume's info at
+  # it). Without it a segmentation layer opens invisible until a segment is picked.
+  # The graph pipeline does this itself in pass 5; this tool is for other volumes.
+  source_path: "file:///path/to/precomputed_outputs/<segmentation_volume>/"
+  mip: 1                 # scan resolution; 0 = exact (slow), 1-2 = fast
+  z_step: 128
+  # optional: tag segments that never contain confident interior as #debris
+  affinity_path: ""      # e.g. "file:///path/to/precomputed_outputs/<affinity_volume>/"
+  debris_threshold: 76   # mean affinity 0-255

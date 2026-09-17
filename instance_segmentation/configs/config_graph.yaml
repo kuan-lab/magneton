@@ -1,0 +1,112 @@
+# Instance segmentation -- graph pipeline (non-overlapping cores + region graph).
+# TEMPLATE: copy, then edit paths/sizes for a volume. The legacy overlap-vote
+# pipeline has its own template in config.yaml (2 sections, block.size/overlap).
+#
+# Passes: 1 fragments -> 2 edges -> 3 global merge -> 4 relabel -> 5 segment props
+paths:
+  input: "file:///path/to/precomputed_outputs/<affinity_volume>/"
+  fragments: "file:///path/to/precomputed_outputs/<name>_fragments/"   # pass 1 writes it once (uint64)
+  output: "file:///path/to/precomputed_outputs/<name>_instances/"      # pass 4 writes it
+
+mask:
+  flag: false
+  path: ""
+
+block:
+  # Cores TILE the volume: no overlap, so no voxel is ever labelled twice.
+  # Must be a whole number of storage chunks (usually 128) or two cores can land
+  # in the same chunk file and clobber each other under parallel writes.
+  core: [384, 512, 512]
+  # Context for computation only; never written. core+halo sets per-task memory.
+  halo: [128, 128, 128]
+  # roi: [z1, z2, y1, y2, x1, x2]   # optional sub-volume; origin must be chunk-aligned
+
+checkpoint:
+  fragments_dir: "magneton/checkpoints/fragments_<name>"
+  relabel_dir: "magneton/checkpoints/relabel_<name>"
+
+fragments_stage:
+  mip: 0
+  supervoxel: "3d"
+  # Seeds only where mean affinity exceeds this (0.9 = 229/255). The legacy 0.1
+  # (~25/255) also seeds INSIDE membrane, which yields tiny floating segments.
+  # Not a free knob -- see the project_graph_instance_seg memory before changing.
+  interior_threshold: 0.9
+  min_distance: 3
+  hpc:
+    enable: true
+    scheduler: "slurm"
+    job_dir: "magneton/jobs/fragments_<name>"
+    blocks_per_job: 4
+    workers_per_job: 2
+    hpc_num: 12                         # array concurrency; omitting it = all at once
+    python_bin: "python"
+    time: "5:00:00"
+    cpus: 2
+    mem: "48G"                          # PER-CPU
+    partition: "gpu"
+    extra_modules: ["StdEnv", ]
+    conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+    env: "magneton"
+    work_path: .
+
+edges_stage:
+  mip: 0
+  merge_function: 'aff50_his256'        # same scoring waterz uses in-block
+  aff_thresholds: [0.00001, 0.99999]
+  score_threshold: 0.45                 # pass 3 can only sweep BELOW this
+  edges_dir: "magneton/metadata/edges_<name>"
+  require_all_fragments: true           # cross-core edges need every neighbour on disk
+  hpc:
+    enable: true
+    scheduler: "slurm"
+    job_dir: "magneton/jobs/edges_<name>"
+    blocks_per_job: 4
+    workers_per_job: 2
+    hpc_num: 12
+    python_bin: "python"
+    time: "5:00:00"
+    cpus: 2
+    mem: "48G"
+    partition: "gpu"
+    extra_modules: ["StdEnv", ]
+    conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+    env: "magneton"
+    work_path: .
+
+global_merge_stage:
+  threshold: 0.45                       # sweeping this re-runs passes 3+4 only (minutes)
+  # Contact-area floor. NOTE: >= 4 mathematically orphans every 1-voxel fragment,
+  # which is why core-face slivers can survive as tiny segments.
+  min_contact: 20
+  dedupe: "max"                         # duplicate face scores: keep the worst
+  lut_dir: "magneton/checkpoints/lut_<name>"
+
+relabel_stage:
+  in_place: false                       # true overwrites fragments -- kills threshold sweeps
+  segment_properties: false             # pass 5 does this; cores still write counts_*.npz
+  hpc:
+    enable: true
+    scheduler: "slurm"
+    job_dir: "magneton/jobs/relabel_<name>"
+    blocks_per_job: 4
+    workers_per_job: 2
+    hpc_num: 12
+    python_bin: "python"
+    time: "2:00:00"
+    cpus: 4
+    mem: "16G"
+    partition: "gpu"
+    extra_modules: ["StdEnv", ]
+    conda: /gpfs/radev/apps/avx512/software/miniconda/24.3.0-miniforge/etc/profile.d/conda.sh
+    env: "magneton"
+    work_path: .
+
+segment_props_stage:
+  # merges relabel's per-core counts into <output>/segment_properties so the layer
+  # opens with segments visible in Neuroglancer instead of empty
+  require_all_cores: true
+  dir_name: "segment_properties"
+  debris_tag: false                     # true = rescan affinity to tag #debris (slower)
+  debris_threshold: 76                  # mean affinity 0-255
+  z_step: 128
