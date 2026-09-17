@@ -4,6 +4,10 @@ magneton package initializer.
 Keep it lightweight; avoid importing large dependencies here to prevent introducing side effects during imports.
 """
 from .main import run, run_interactive
+from .legacy_main import (
+    run as run_legacy,
+    run_interactive as run_interactive_legacy,
+)
 
 __all__ = [
     "config",

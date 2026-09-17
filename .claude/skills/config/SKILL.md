@@ -37,11 +37,18 @@ This is the **authoritative static registry**. If a new pipeline function/stage/
 
 | Stage keyword(s) | Template dir | Reference templates | Pointer in root config.yaml |
 |---|---|---|---|
-| `segmentation` / `instance segmentation` / `waterz` / `mito seg` / `bouton seg` | `instance_segmentation/configs/` | `config.yaml`, `config_b.yaml`, `config_c.yaml`, `config_f.yaml`, `config_30tb.yaml`; bouton mode: `config_fib_b_bouton_v1.yaml` (full vol), `config_fib_b_bouton_roi_test.yaml` (single-block ROI) | `instance_segmentation.main` |
+| `segmentation` / `instance segmentation` / `graph pipeline` (neuron, DEFAULT) | `instance_segmentation/configs/` | `config_fib_c_neuron_graph_v1.yaml` (full vol), `config_fib_c_neuron_graph_roitest_v2.yaml` (ROI, `block.roi` set) | `instance_segmentation.main` |
+| `legacy segmentation` / `waterz` / `mito seg` / `bouton seg` (overlap-vote) | `instance_segmentation/configs/` | `config.yaml`, `config_b.yaml`, `config_c.yaml`, `config_f.yaml`, `config_30tb.yaml`; bouton mode: `config_fib_b_bouton_v1.yaml` (full vol), `config_fib_b_bouton_roi_test.yaml` (single-block ROI) | `instance_segmentation_legacy.main` |
 
-Note: one instance_segmentation config file holds **both** the segmentation stage and the merge stage (two top-level sections: `segmentation_stage` and `merge_stage`). They are not separate files.
+Note: **two instance-seg pipelines share the directory.** A *graph* config (5 sections:
+`fragments_stage`, `edges_stage`, `global_merge_stage`, `relabel_stage`, `segment_props_stage`) drives menu
+3 and uses `block.core` + `block.halo`; cores tile with no overlap and the halo is context only. A *legacy*
+config (2 sections: `segmentation_stage`, `merge_stage`) drives menu 6 and uses `block.size` +
+`block.overlap`. Never mix the two shapes in one file — pick the pipeline first, then clone that template.
 
-Note: **supervoxel proofreading** is a toggle on this same config (`segmentation_stage.emit_supervoxels: true`, neuron mode). After the normal seg → merge-pools → merge-apply chain, a `merge-supervox` stage (menu option 7, or `merge-supervox-hpc` option 8) stitches the per-block supervoxels into a global supervoxel precomputed layer + an agglomerate npz bundle (→ WebKnossos Zarr-v3 attachment via `emit_agglomerate_zarr.py`). It reuses the same block/core machinery; nodes/positions/labels come from the assembled volume. Reference: `config_fib_b_neuron_sv.yaml` (full) / `config_fib_b_neuron_svtest.yaml` (crop).
+Note (graph): mito/bouton modes are **legacy only** — the graph pipeline is neuron/waterz today.
+
+Note: **supervoxel proofreading** is a toggle on the LEGACY config (`segmentation_stage.emit_supervoxels: true`, neuron mode); the graph pipeline writes a supervoxel volume as pass 1 by design, so it needs no toggle. After the normal seg → merge-pools → merge-apply chain, a `merge-supervox` stage (menu option 7, or `merge-supervox-hpc` option 8) stitches the per-block supervoxels into a global supervoxel precomputed layer + an agglomerate npz bundle (→ WebKnossos Zarr-v3 attachment via `emit_agglomerate_zarr.py`). It reuses the same block/core machinery; nodes/positions/labels come from the assembled volume. Reference: `config_fib_b_neuron_sv.yaml` (full) / `config_fib_b_neuron_svtest.yaml` (crop).
 
 ### Analysis (per-instance morphometrics)
 
@@ -177,7 +184,31 @@ The override file (e.g. `Isotropic-Neuron-Affinity-UNet.yaml`) only contains a h
 - `hpc.mutil_jobs_configs.configs_save_path`, `input_folder`, `batch_num` (only if `mutil_jobs: true`)
 - `hpc.mutil_jobs_configs.chunks_per_task` — int, default 1. Groups N chunks into one SLURM array task so CUDA warmup (~19 s) + Python/model-load (~13 s) are paid once per N chunks instead of per chunk. Implemented in `run_hpc.py:_gen_chunk_configs` and the multi-chunk loop in `run.py`. Values of 5 work well on 512³ FIB-SEM (70 chunks → 14 tasks). Set to 1 to preserve legacy single-chunk-per-task behavior.
 
-### instance_segmentation
+### instance_segmentation (graph pipeline — 5 passes)
+- `paths.input` — affinity precomputed; `paths.fragments` — supervoxel volume (pass 1 writes it once,
+  uint64); `paths.output` — final instances (pass 4)
+- `block.core` — `[z, y, x]` owned region; **must be a whole number of 128-voxel chunks** or parallel cores
+  land in the same chunk file (the grid builder raises). Cores tile exactly: no overlap, no redundant blocks.
+- `block.halo` — `[z, y, x]` context for computation only, never written. core+halo ≈ the legacy block size
+  keeps per-task memory unchanged.
+- `block.roi` — same meaning as legacy; origin must be chunk-aligned.
+- `checkpoint.fragments_dir`, `checkpoint.relabel_dir`
+- `fragments_stage.interior_threshold` — seeds only where mean affinity exceeds it (0.9 = 229/255). The
+  legacy default 0.1 (=25.5) seeds **inside membrane**, producing tiny floating segments that also bridge
+  cells. Raising it is not free: see `project_graph_instance_seg` memory before changing.
+- `fragments_stage.supervoxel`, `min_distance`, `mip`, `hpc.*`
+- `edges_stage.merge_function`, `aff_thresholds`, `score_threshold` (pass 3 can only sweep BELOW this),
+  `edges_dir`, `require_all_fragments` (pass 2 needs every core's fragments on disk), `hpc.*`
+- `global_merge_stage.threshold` (sweep: passes 3+4 only, minutes), `min_contact` (**a floor >= 4
+  mathematically orphans every 1-voxel fragment — it is why core-plane slivers survive**), `dedupe`
+  (`max` = keep the worst duplicate score), `lut_dir`
+- `relabel_stage.in_place` (true overwrites the fragments volume — one-way, kills threshold sweeps),
+  `segment_properties` (legacy in-stage writer; keep false, pass 5 does it), `hpc.*`
+- `segment_props_stage.require_all_cores`, `dir_name`, `debris_tag` (+`debris_threshold`, `z_step`)
+- **`hpc_num` in every stage's `hpc` block** — array concurrency (`%N`). Omitting it now defaults to "all
+  tasks at once"; it used to mean `%1` and silently serialised the array.
+
+### instance_segmentation (LEGACY overlap-vote)
 - `paths.input` — affinity precomputed
 - `paths.output` — global instance output
 - `paths.output_local_base` — per-block output base path

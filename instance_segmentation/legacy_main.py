@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Instance segmentation module — supports both direct CLI execution and unified package CLI interface.
+LEGACY instance segmentation: overlapping blocks + overlap-vote stitching.
+
+Kept for backwards compatibility with existing volumes (fib_b/c/f _midaff_lsd_i300k).
+New work should use the graph pipeline in main.py (non-overlapping cores + region
+graph), which does not decide merges by comparing two labelings of the same voxels.
 
 Provides:
 - main(): standalone CLI for segmentation/merge/tools pipeline
@@ -35,39 +39,21 @@ from magneton.instance_segmentation.config import (
 )
 
 # === Pipeline modules ===
-# from magneton.instance_segmentation.stages.segmentation_stage import (
-#     segmentation_blocks,
-#     segmentation_blocks_parallel,
-# )
-# from magneton.instance_segmentation.stages.segmentation_stage_hpc import segmentation_blocks_hpc
-# from magneton.instance_segmentation.stages.merge_pools import build_id_pools_parallel
-# from magneton.instance_segmentation.stages.merge_apply import apply_pools_to_global
-# from magneton.instance_segmentation.state.checkpoint import load_merge_state
+from magneton.instance_segmentation.stages.segmentation_stage import (
+    segmentation_blocks,
+    segmentation_blocks_parallel,
+)
+from magneton.instance_segmentation.stages.segmentation_stage_hpc import segmentation_blocks_hpc
+from magneton.instance_segmentation.stages.merge_pools import build_id_pools_parallel
+from magneton.instance_segmentation.stages.merge_pools_hpc import build_id_pools_parallel_hpc
+from magneton.instance_segmentation.stages.merge_apply import apply_pools_to_global
+from magneton.instance_segmentation.stages.merge_apply_hpc import apply_pools_to_global_hpc
+from magneton.instance_segmentation.stages.merge_supervox import merge_supervox
+from magneton.instance_segmentation.stages.merge_supervox_hpc import merge_supervox_hpc
+from magneton.instance_segmentation.state.checkpoint import load_merge_state
 
-# === Tools ===
-from magneton.toolkit.tools.split import split_volume
-from magneton.toolkit.tools.split_hpc import split_volume_hpc
-from magneton.toolkit.tools.merge import merge_volume
-from magneton.toolkit.tools.merge_hpc import merge_volume_hpc
-from magneton.toolkit.tools.convert_prec import convert_prec
-from magneton.toolkit.tools.convert_prec_hpc import convert_prec_hpc
-from magneton.toolkit.tools.downsample_prec import downsample_prec
-from magneton.toolkit.tools.downsample_prec_hpc import downsample_prec_hpc
-from magneton.toolkit.tools.gen_mask import gen_aff_mask
-from magneton.toolkit.tools.gen_mask_hpc import gen_aff_mask_hpc
-from magneton.toolkit.tools.mask_prec import mask_prec
-from magneton.toolkit.tools.mask_prec_hpc import mask_prec_hpc
-from magneton.toolkit.tools.mask_tif import mask_tif
-from magneton.toolkit.tools.mask_tif_hpc import mask_tif_hpc
-from magneton.toolkit.tools.resize_tif import resize_tif
-from magneton.toolkit.tools.resize_tif_hpc import resize_tif_hpc
-from magneton.toolkit.tools.crop import crop_volume
-from magneton.toolkit.tools.crop_hpc import crop_volume_hpc
-from magneton.toolkit.tools.mesh_prec import mesh_prec
-from magneton.toolkit.tools.mesh_prec_hpc import mesh_prec_hpc
-from magneton.toolkit.tools.segment_props import segment_props
 
-from magneton.toolkit.utils.interrupts import InterruptController
+from magneton.instance_segmentation.utils.interrupts import InterruptController
 
 # ==========================================================
 # Unified CLI interface (for package-level use)
@@ -179,14 +165,12 @@ def edit_stage_config(config_path: str, stage_name: str):
         print(f"Updated {key} → {new_val}")
 
     # Save to temporary file
-    # temp_path = config_path + ".tmp"
-    temp_path = config_path
+    temp_path = config_path + ".tmp"
     with open(temp_path, "w") as f:
         yaml.safe_dump(cfg_data, f, sort_keys=False)
     print(f"Temporary modified config saved: {temp_path}")
 
     return temp_path
-
 
 # ------------------------------------------
 # Main
@@ -202,49 +186,10 @@ def run(args, global_cfg):
     )
 
     # Resolve config paths
-    split_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("split", "magneton/toolkit/configs/config_split.yaml")
-    )
-    merge_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("merge", "magneton/toolkit/configs/config_merge.yaml")
-    )
-    prec_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("prec", "magneton/toolkit/configs/config_prec.yaml")
-    )
-    downsample_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("downsample", "magneton/toolkit/configs/config_downsample.yaml")
-    )
-    gen_mask_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("gen_mask", "magneton/toolkit/configs/config_gen_mask.yaml")
-    )
-    mask_prec_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("mask_prec", "magneton/toolkit/configs/config_mask.yaml")
-    )
-    mask_tif_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("mask_tif", "magneton/toolkit/configs/config_mask_tif.yaml")
-    )
-    resize_tif_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("resize_tif", "magneton/toolkit/configs/config_resize_tif.yaml")
-    )
-    crop_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("crop", "magneton/toolkit/configs/config_crop.yaml")
-    )
-    mesh_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("mesh", "magneton/toolkit/configs/config_mesh.yaml")
-    )
-    segprops_cfg_path = (
-        global_cfg.get("toolkit", {})
-        .get("segment_props", "magneton/toolkit/configs/config_segment_props.yaml")
+    seg_cfg_path = (
+        global_cfg.get("instance_segmentation_legacy", {})
+        .get("main", global_cfg.get("instance_segmentation", {})
+             .get("main", "magneton/instance_segmentation/configs/config.yaml"))
     )
 
     def confirm_stage(stage_name):
@@ -261,87 +206,141 @@ def run(args, global_cfg):
     # Stage logic
     # -----------------------------------
     try:
-        if not confirm_stage(f"Tool: {args.tools}"):
-            return
-        tool_map = {
-            "split volume": split_cfg_path,
-            "split volume [hpc]": split_cfg_path, 
-            "merge blocks": merge_cfg_path, 
-            "merge blocks [hpc]": merge_cfg_path,
-            "convert prec": prec_cfg_path,
-            "convert prec [hpc]": prec_cfg_path,
-            "downsample prec": downsample_cfg_path,
-            "downsample prec [hpc]": downsample_cfg_path,
-            "generate mask": gen_mask_cfg_path,
-            "generate mask [hpc]": gen_mask_cfg_path,
-            "mask prec": mask_prec_cfg_path,
-            "mask prec [hpc]": mask_prec_cfg_path,
-            "mask tif": mask_tif_cfg_path,
-            "mask tif [hpc]": mask_tif_cfg_path,
-            "resize tif": resize_tif_cfg_path,
-            "resize tif [hpc]": resize_tif_cfg_path,
-            "crop volume": crop_cfg_path,
-            "crop volume [hpc]": crop_cfg_path,
-            "mesh prec": mesh_cfg_path,
-            "mesh prec [hpc]": mesh_cfg_path,
-            "segment props": segprops_cfg_path,
-        }
-        tool_cfg_path = tool_map.get(args.tools.lower(), prec_cfg_path)
-        # print(args.tools)
-        tool_cfg_path = edit_stage_config(tool_cfg_path, f"Tool: {args.tools}")
-        print(f"Running tool with config: {tool_cfg_path}")
-        tool_cfg = load_config(tool_cfg_path)
-        with InterruptController():
-            handle_tools(args, tool_cfg)
-            # handle_tools(args, global_cfg)
-        print("Press Enter to return menu.")
-        input("> ").strip().lower()
-        # safe_run(handle_tools, args, global_cfg)
+        if args.stage == "segmentation":
+            if not confirm_stage("Segmentation"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Segmentation Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "segmentation")
+            func = segmentation_blocks_parallel if stage_cfg.get("parallel", False) else segmentation_blocks
+            with InterruptController():
+                func(cfg, stage_cfg, restart=args.restart)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+            # safe_run(func, cfg, stage_cfg, restart=args.restart)
 
+        elif args.stage == "segmentation-hpc":
+            if not confirm_stage("Segmentation-HPC"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Segmentation-HPC Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "segmentation")
+            with InterruptController():
+                segmentation_blocks_hpc(cfg, stage_cfg, restart=args.restart, dry_run=False)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+            # safe_run(segmentation_blocks_hpc, cfg, stage_cfg, restart=args.restart, dry_run=False)
+
+        elif args.stage == "merge-pools":
+            if not confirm_stage("Merge-Pools"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Pools Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                build_id_pools_parallel(cfg, stage_cfg, restart=args.restart)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+            # safe_run(build_id_pools_parallel, cfg, stage_cfg, restart=args.restart)
+        elif args.stage == "merge-pools-hpc":
+            if not confirm_stage("Merge-Pools-HPC"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Pools Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                build_id_pools_parallel_hpc(cfg, stage_cfg, restart=args.restart)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+
+        elif args.stage == "merge-apply":
+            if not confirm_stage("Merge-Apply"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Apply Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                apply_pools_to_global(cfg, stage_cfg)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+            # safe_run(apply_pools_to_global, cfg, stage_cfg)
+        elif args.stage == "merge-apply-hpc":
+            if not confirm_stage("Merge-Apply-HPC"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Apply Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                apply_pools_to_global_hpc(cfg, stage_cfg)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+
+        elif args.stage == "merge-supervox":
+            if not confirm_stage("Merge-Supervox"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Supervox Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                merge_supervox(cfg, stage_cfg)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+
+        elif args.stage == "merge-supervox-hpc":
+            if not confirm_stage("Merge-Supervox-HPC"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Supervox Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "merge")
+            with InterruptController():
+                merge_supervox_hpc(cfg, stage_cfg)
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+
+        elif args.stage == "status":
+            cfg = load_config(seg_cfg_path)
+            folder_done = cfg["checkpoint"]["segmentation_dir"]
+            print(f"[Checkpoint folder]: {folder_done}")
+            if not os.path.exists(folder_done):
+                print("Segmentation state: checkpoint folder not found.")
+            else:
+                files = os.listdir(folder_done)
+                if not files:
+                    print("Segmentation state: no block done.")
+                else:
+                    print("Segmentation state:")
+                    for f in files:
+                        print(f"[Done] {f}")
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+                        
+        elif args.stage == "clean":
+            if not confirm_stage("Clean Temporary Files"):
+                return
+            cfg = load_config(seg_cfg_path)
+            for path in [
+                cfg["checkpoint"]["segmentation_dir"],
+                cfg["checkpoint"]["merge_dir"],
+                cfg["segmentation_stage"]["metadata_dir"],
+            ]:
+                if os.path.exists(path):
+                    shutil.rmtree(path)
+                    print(f"[INFO] Cleaned: {path}")
+                else:
+                    print(f"[INFO] Cleaned: {path}")
+            print("Press Enter to return menu.")
+            input("> ").strip().lower()
+        
+        # return True
+        # if stop_flag.is_set():
+        #     print("Stage ended early due to interruption.")
+        # else:
         console.print(f"[bold green]▶ Stage {args.stage} completed.[/bold green]\n")
 
     except KeyboardInterrupt:
         print("\nExecution interrupted abruptly by user.")
     finally:
         logging.shutdown()
-
-# ==========================================================
-# Tool dispatcher
-# ==========================================================
-def handle_tools(args, tool_cfg):
-    """Dispatch preprocessing tools."""
-
-    tools_map = {
-        "split volume": lambda: split_volume(tool_cfg),
-        "split volume [hpc]": lambda: split_volume_hpc(tool_cfg),
-        "merge blocks": lambda: merge_volume(tool_cfg),
-        "merge blocks [hpc]": lambda: merge_volume_hpc(tool_cfg),
-        "convert prec": lambda: convert_prec(tool_cfg),
-        "convert prec [hpc]": lambda: convert_prec_hpc(tool_cfg),
-        "downsample prec": lambda: downsample_prec(tool_cfg),
-        "downsample prec [hpc]": lambda: downsample_prec_hpc(tool_cfg),
-        "generate mask": lambda: gen_aff_mask(tool_cfg),
-        "generate mask [hpc]": lambda: gen_aff_mask_hpc(tool_cfg),
-        "mask prec": lambda: mask_prec(tool_cfg),
-        "mask prec [hpc]": lambda: mask_prec_hpc(tool_cfg),
-        "mask tif": lambda: mask_tif(tool_cfg),
-        "mask tif [hpc]": lambda: mask_tif_hpc(tool_cfg),
-        "resize tif": lambda: resize_tif(tool_cfg),
-        "resize tif [hpc]": lambda: resize_tif_hpc(tool_cfg),
-        "crop volume": lambda: crop_volume(tool_cfg),
-        "crop volume [hpc]": lambda: crop_volume_hpc(tool_cfg),
-        "mesh prec": lambda: mesh_prec(tool_cfg),
-        "mesh prec [hpc]": lambda: mesh_prec_hpc(tool_cfg),
-        "segment props": lambda: segment_props(tool_cfg),
-    }
-
-    tool_fn = tools_map.get(args.tools.lower())
-    if tool_fn is None:
-        print(f"Unknown tool: {args.tools}")
-    else:
-        with InterruptController():
-            tool_fn()
-
 
 # ==========================================================
 # Interactive CLI mode
@@ -447,118 +446,58 @@ def modify_global_config(cfg, cfg_path):
 
 def run_interactive():
     """Interactive CLI mode with styled Rich interface."""
-    console.print("\n[bold bright_white] Pre- and Post-Processing Mode [/bold bright_white]\n")
+    console.print("\n[bold bright_white] Instance Segmentation (LEGACY overlap-vote) Interactive Mode[/bold bright_white]\n")
 
     cfg_path = "magneton/config.yaml"
-    # cfg, cfg_path = load_global_config(cfg_path)
+    cfg, cfg_path = load_global_config(cfg_path)
 
     # choice_pool = [str(i) for i in range(10)] + ["h", "help"]
-    # choice_pool = [str(i) for i in range(16)]
-
-    # === Help descriptions ===
-
-    # === Tool List ===
-    tool_list = [
-        "Split Volume",
-        "Split Volume [HPC]",
-        "Merge Blocks",
-        "Merge Blocks [HPC]",
-        "Convert Prec",
-        "Convert Prec [HPC]",
-        "Downsample Prec",
-        "Downsample Prec [HPC]",
-        "Generate Mask",
-        "Generate Mask [HPC]",
-        "Mask Prec",
-        "Mask Prec [HPC]",
-        "Mask Tif",
-        "Mask Tif [HPC]",
-        "Resize Tif",
-        "Resize Tif [HPC]",
-        "Crop Volume",
-        "Crop Volume [HPC]",
-        "Mesh Prec",
-        "Mesh Prec [HPC]",
-        "Modify Global Config",
-        "View Current Config",
-    ]
-
-    tool_help = {
-        "split volume": "Split tif volume to tif blocks with overlap.",
-        "split volume [hpc]": "Split tif volume to tif blocks with overlap in HPC.",
-        "merge blocks": "Merge h5 blocks (inference results) to tif volume with overlap",
-        "merge blocks [hpc]": "Merge h5 blocks (inference results) to tif volume with overlap in HPC",
-        "convert prec": "Convert tif/h5 data to precomputed format.",
-        "convert prec [hpc]": "Convert tif/h5 data to precomputed format by using hpc resources.",
-        "downsample prec": "Create lower-resolution mipmap levels using voxel downsampling for precomputed data.",
-        "downsample prec [hpc]": "Create lower-resolution mipmap levels using voxel downsampling for precomputed data by using hpc resources.",
-        "generate mask": "Generate binary masks from affinity maps.",
-        "generate mask [hpc]": "Generate binary masks from affinity maps by using hpc resources.",
-        "mask prec": "Apply a mask to prec images, preserving structure.",
-        "mask prec [hpc]": "Apply a mask to prec images by using hpc resources.",
-        "mask tif": "Apply a mask to tif images, preserving structure.",
-        "mask tif [hpc]": "Apply a mask to tif images by using hpc resources.",
-        "resize tif": "Resize tif volumes to new voxel size or dimension.",
-        "resize tif [hpc]": "Resize tif volumes to new voxel size or dimension by using hpc resources.",
-        "crop volume": "Crop a region from a volume (tif/h5/precomputed).",
-        "crop volume [hpc]": "Crop a region from a volume by using hpc resources.",
-        "mesh prec": "Generate 3D meshes from precomputed segmentation volumes using igneous.",
-        "mesh prec [hpc]": "Generate 3D meshes from precomputed segmentation volumes by using hpc resources.",
-        "segment props": "Write a Neuroglancer segment-property list so every segment shows on load (+ size/debris tags).",
-        "modify global config": "Modify the global configuration files for each module",
-        "view current config":"View the global configuration files for each module",
-    }
+    choice_pool = [str(i) for i in range(13)]
 
     while True:
-        # console.rule("[bold bright_white]Instance Segmentation Menu[/bold bright_white]", style="bold white")
-        # choice = Prompt.ask("[bright_white]> Select stage[/bright_white]", default="0").strip().lower()
-        # if choice not in choice_pool:
-        #     console.print("[red]Invalid selection. Try again.[/red]")
-        #     continue
+        console.rule("[bold bright_white]Instance Segmentation Menu (LEGACY)[/bold bright_white]", style="bold white")
+
+        table = Table(show_header=True, box=box.SIMPLE, border_style="white", 
+                      title_style="bold bright_white",header_style="bright_white",)
         
-        choice = "1"
-       
-        cfg, cfg_path = load_global_config(cfg_path)
+        table.add_column("Option", justify="center", style="white")
+        table.add_column("Function", style="white")
+        table.add_column("Description", style="white")
+        table.add_row("1", "Affinity Map Segmentation", "Run affinity map segmentation using local resources")
+        table.add_row("2", "Affinity Map Segmentation [HPC]", "Run affinity map segmentation using HPC resources")
+        table.add_row("3", "Merge Blocks - Pools", "Generate a global ID pool for all segmentated blocks")
+        table.add_row("4", "Merge Blocks - Pools [HPC]", "Generate a global ID pool for all segmentated blocks using HPC resources")
+        
+        table.add_row("5", "Merge Blocks - Apply", "Apply the global ID pool to all segmentated blocks")
+        table.add_row("6", "Merge Blocks - Apply [HPC]", "Apply the global ID pool to all segmentated blocks using HPC resources")
+        table.add_row("7", "Merge Blocks - Supervox", "Stitch supervoxels into a global layer + agglomerate graph (proofreading)")
+        table.add_row("8", "Merge Blocks - Supervox [HPC]", "Stitch supervoxels into a global layer + agglomerate graph using HPC resources")
 
-        # === Stage argument setup ===
-        class Args:
-            pass
+        table.add_row("9", "Status", "View current segmentation status")
+        table.add_row("10", "Clean", "Remove checkpoints and temp data of segmentation")
+        table.add_row("11", "Modify Global Config", "Modify the global configuration files for each module")
+        table.add_row("12", "View Current Config", "View the global configuration files for each module")
+        table.add_row("0", "Return", "Return to main menu")
+        # table.add_row("h", "Help", "Function description")
 
-        args = Args()
-        mapping = {
-            "1": "tools",
-        }
-        args.stage = mapping.get(choice)
-        args.debug = False
+        console.print(table)
 
-        # === Tools submenu ===
-        console.rule("[bold bright_white]Tools Menu[/bold bright_white]", style="bold white")
-        tool_table = Table(show_header=True, box=box.SIMPLE, border_style="white", 
-                title_style="bold bright_white",header_style="bright_white",)
-        tool_table.add_column("Option", justify="center", style="white")
-        tool_table.add_column("Tool", style="white")
-        tool_table.add_column("Description", style="white")
-        for i, name in enumerate(tool_list, start=1):
-            desc = tool_help.get(name.lower(), "No description available.")
-            # tool_table.add_row(f"[cyan]{i}.[/] {name}")
-            tool_table.add_row(f"{i}", f"{name}", f"{desc}")
+        choice = Prompt.ask("[bright_white]> Select stage[/bright_white]", default="0").strip().lower()
+        if choice not in choice_pool:
+            console.print("[red]Invalid selection. Try again.[/red]")
+            continue
 
-        tool_table.add_row("0", f"Return", "Return to main menu")
-        # tool_table.add_row("h", f"Help", "Tools description")
-        console.print(tool_table)
-
-        selected = Prompt.ask("[bright_white]> Select tool [index][/bright_white]", default="0").strip().lower()
-        if selected in ["0", ""]:
-            console.print("[yellow]Returning to main menu...[/yellow]")
+        if choice == "0":
+            console.print("[yellow]Exit Instance Segmentation Pipeline.[/yellow]")
             break
 
-        if selected == "21":
+        if choice == "11":
             cfg, cfg_path = modify_global_config(cfg, cfg_path)
             print("Press Enter to return menu.")
             input("> ").strip().lower()
             continue
 
-        if selected == "22":
+        if choice == "12":
             console.rule("[bold bright_white]Current Global Config[/bold bright_white]", style="bright_cyan")
             config_table = Table(
                     box=box.SIMPLE,
@@ -588,27 +527,38 @@ def run_interactive():
             print("Press Enter to return menu.")
             input("> ").strip().lower()
             continue
+        
+        cfg, cfg_path = load_global_config(cfg_path)
 
-        selected_indices = []
-        for x in selected.replace(",", " ").split():
-            if x.isdigit():
-                idx = int(x)
-                if 1 <= idx <= len(tool_list):
-                    selected_indices.append(tool_list[idx - 1])
-            elif x in tool_list:
-                selected_indices.append(x)
+        # === Stage argument setup ===
+        class Args:
+            pass
 
-        if not selected_indices:
-            console.print("[red]No valid tool selected.[/red]")
-            continue
+        args = Args()
+        mapping = {
+            "1": "segmentation",
+            "2": "segmentation-hpc",
+            "3": "merge-pools",
+            "4": "merge-pools-hpc",
+            "5": "merge-apply",
+            "6": "merge-apply-hpc",
+            "7": "merge-supervox",
+            "8": "merge-supervox-hpc",
+            "9": "status",
+            "10": "clean",
+        }
+        args.stage = mapping.get(choice)
+        args.debug = False
 
-        for tool in selected_indices:
-            console.print(f"\n[green]▶ Running tool:[/] [cyan]{tool}[/cyan]")
-            args.tools = tool
-            run(args, cfg)
+        if args.stage in ["segmentation", "segmentation-hpc", "merge-pools"]:
+            restart_choice = Prompt.ask("[white]> Restart? (y/n)[/white]", default="n").lower()
+            args.restart = restart_choice.startswith("y")
+        else:
+            args.restart = False
 
-        console.print("[bold green]Selected tool finished.[/bold green]")
-        # break
+        console.print(f"\n[green]▶ Executing stage:[/] [cyan]{args.stage}[/cyan]")
+        run(args, cfg)
+        # console.print(f"[bold green] Stage completed.[/bold green]\n")
 
 
 # ==========================================================
@@ -620,7 +570,15 @@ def main():
     parser.add_argument(
         "--stage",
         choices=[
+            "segmentation",
+            "segmentation-hpc",
+            "merge-pools",
+            "merge-apply",
+            "merge-supervox",
+            "merge-supervox-hpc",
             "tools",
+            "status",
+            "clean",
         ],
         required=True,
     )
@@ -639,11 +597,6 @@ def main():
             "mask-tif-hpc",
             "resize-tif",
             "resize-tif-hpc",
-            "crop-volume",
-            "crop-volume-hpc",
-            "mesh-prec",
-            "mesh-prec-hpc",
-            "segment-props",
         ],
         required=False,
     )

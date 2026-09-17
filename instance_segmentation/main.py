@@ -1,30 +1,33 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Instance segmentation module — supports both direct CLI execution and unified package CLI interface.
+Instance segmentation — graph pipeline (non-overlapping cores + region graph).
 
-Provides:
-- main(): standalone CLI for segmentation/merge/tools pipeline
-- run(args, global_cfg): for external CLI calls
-- run_interactive(): for interactive (menu-style) usage
+Four passes, each its own run over the data:
+
+  1 fragments     watershed per core (halo = context only), crop to the core,
+                  globally unique ids -> ONE supervoxel volume
+  2 edges         per core, waterz over core+halo on those fragments -> region
+                  graph edges (incl. pairs meeting across a core face), scored
+                  by the same merge function used inside a core
+  3 global merge  concat edges -> threshold + min contact -> connected
+                  components -> LUT fragment id -> segment id
+  4 relabel       apply the LUT per core -> final segmentation
+
+No block ever decides that two fragments are one cell; every merge is made once,
+globally, in pass 3. The legacy overlap-vote pipeline lives in legacy_main.py.
 """
-
 import argparse
 import logging
-import shutil
 import os
+import shutil
 import time
-import yaml
-import signal
-import threading
-import inspect
 
+import yaml
 from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
 from rich.prompt import Prompt
+from rich.table import Table
 from rich import box
-import torch
 
 console = Console()
 
@@ -33,303 +36,202 @@ from magneton.instance_segmentation.config import (
     get_stage_config,
     load_global_config_path,
 )
-
-# === Pipeline modules ===
-from magneton.instance_segmentation.stages.segmentation_stage import (
-    segmentation_blocks,
-    segmentation_blocks_parallel,
+from magneton.instance_segmentation.legacy_main import (
+    edit_stage_config,
+    load_global_config,
+    modify_global_config,
 )
-from magneton.instance_segmentation.stages.segmentation_stage_hpc import segmentation_blocks_hpc
-from magneton.instance_segmentation.stages.merge_pools import build_id_pools_parallel
-from magneton.instance_segmentation.stages.merge_pools_hpc import build_id_pools_parallel_hpc
-from magneton.instance_segmentation.stages.merge_apply import apply_pools_to_global
-from magneton.instance_segmentation.stages.merge_apply_hpc import apply_pools_to_global_hpc
-from magneton.instance_segmentation.stages.merge_supervox import merge_supervox
-from magneton.instance_segmentation.stages.merge_supervox_hpc import merge_supervox_hpc
-from magneton.instance_segmentation.state.checkpoint import load_merge_state
-
-
+from magneton.instance_segmentation.stages.fragments_stage import fragments_blocks
+from magneton.instance_segmentation.stages.fragments_stage_hpc import fragments_blocks_hpc
+from magneton.instance_segmentation.stages.edges_stage import edges_blocks
+from magneton.instance_segmentation.stages.edges_stage_hpc import (
+    edges_blocks_hpc,
+    relabel_blocks_hpc,
+)
+from magneton.instance_segmentation.stages.global_merge import global_merge
+from magneton.instance_segmentation.stages.relabel_stage import relabel_blocks
+from magneton.instance_segmentation.stages.segment_props_stage import segment_properties
 from magneton.instance_segmentation.utils.interrupts import InterruptController
 
-# ==========================================================
-# Unified CLI interface (for package-level use)
-# ==========================================================
-def edit_stage_config(config_path: str, stage_name: str):
-    """Ask user whether to modify stage-specific YAML config before running."""
-    print(f"\nStage: {stage_name}")
-    print(f"Config path: {config_path}")
+STAGES = [
+    "fragments", "fragments-hpc",
+    "edges", "edges-hpc",
+    "global-merge",
+    "relabel", "relabel-hpc",
+    "segment-props",
+    "status", "clean",
+]
 
-    if not os.path.exists(config_path):
-        print(f"Config file not found at {config_path}, skipping modification.")
-        return config_path
-            
-    if not Prompt.ask("[white]> Modify this stage config before running? (y/n)[/white]", default="n").lower().startswith("y"):
-        return config_path
 
-    # Read configuration file
-    with open(config_path, "r") as f:
-        cfg_data = yaml.safe_load(f)
+def _seg_cfg_path(global_cfg):
+    return (global_cfg.get("instance_segmentation", {})
+            .get("main", "magneton/instance_segmentation/configs/config.yaml"))
 
-    # Display Configuration Items (Single Layer)
-    flat_keys = []
-    flat_sections = []
-    print("\nAvailable parameters in config:")
-    config_table = Table(
-            box=box.SIMPLE,
-            title_style="bold bright_white",
-            header_style="bright_white",
-            show_header=True
-        )
-    config_table.add_column("Index", justify="center", style="white")
-    config_table.add_column("Section", style="white")
-    config_table.add_column("Parameter", style="white")
-    config_table.add_column("Value", style="white")
 
-    i = 1
+def _resolve_lut(cfg, stage_cfg):
+    """Explicit lut_path, else the newest LUT in lut_dir."""
+    if stage_cfg.get("lut_path"):
+        return stage_cfg["lut_path"]
+    lut_dir = (cfg.get("global_merge_stage", {})
+               .get("lut_dir", "magneton/checkpoints/lut"))
+    if not os.path.isdir(lut_dir):
+        raise FileNotFoundError(f"no LUT directory {lut_dir}; run global-merge first")
+    luts = [os.path.join(lut_dir, f) for f in os.listdir(lut_dir) if f.endswith(".npz")]
+    if not luts:
+        raise FileNotFoundError(f"no LUT in {lut_dir}; run global-merge first")
+    newest = max(luts, key=os.path.getmtime)
+    print(f"[INFO] using LUT {newest}")
+    return newest
 
-    for section, sub in cfg_data.items():
-        # console.print(f"[bold]{section}[/bold]:")
-        
-        if isinstance(sub, dict):
-            for k, v in sub.items():
-                # console.print(f"   - {k}: [cyan]{v}[/cyan]")
-                flat_keys.append(k)
-                flat_sections.append(section)
-                config_table.add_row(f"{i}", f"{section}", f"{k}", f"[cyan]{v}[/cyan]")
-                i += 1
-        else:
-            # console.print(f"   - [cyan]{sub}[/cyan]")
-            flat_keys.append(section)
-            flat_sections.append(section)
-            config_table.add_row(f"{i}", f"{section}", f"{section}",  f"[cyan]{sub}[/cyan]")
-            i += 1
-        
-    console.print(config_table)
 
-    # idx = 1
-    # for k, v in cfg_data.items():
-    #     print(f"{idx}. {k}: {v}")
-    #     flat_keys.append(k)
-    #     idx += 1
+def _status(cfg):
+    frag_ckpt = cfg["checkpoint"]["fragments_dir"]
+    relabel_ckpt = cfg["checkpoint"].get("relabel_dir", "")
+    edges_dir = cfg.get("edges_stage", {}).get("edges_dir", "")
+    lut_dir = cfg.get("global_merge_stage", {}).get("lut_dir", "")
 
-    while True:
-        choice = input("> Select parameter to modify (number, or ENTER to finish): ").strip()
-        if choice == "":
-            break
-        if not choice.isdigit() or not (1 <= int(choice) <= len(flat_keys)):
-            print("Invalid selection.")
-            continue
+    def count(d, suffix):
+        return (len([f for f in os.listdir(d) if f.endswith(suffix)])
+                if d and os.path.isdir(d) else 0)
 
-        key = flat_keys[int(choice) - 1]
-        section_key = flat_sections[int(choice) - 1]
-        if key == section_key:
-            old_val = cfg_data[section_key]
-            print(f"Current value for {section_key}/{key}: {old_val}")
-            new_val = input("New value: ").strip()
-            if new_val == "":
-                print("No change made.")
-                continue
+    t = Table(box=box.SIMPLE, header_style="bright_white")
+    t.add_column("Pass"); t.add_column("Artifact"); t.add_column("Count")
+    t.add_row("1 fragments", frag_ckpt, str(count(frag_ckpt, ".done")))
+    t.add_row("2 edges", edges_dir, str(count(edges_dir, ".npz")))
+    t.add_row("3 global merge", lut_dir, str(count(lut_dir, ".npz")))
+    t.add_row("4 relabel", relabel_ckpt, str(count(relabel_ckpt, ".done")))
+    t.add_row("  (counts)", relabel_ckpt, str(count(relabel_ckpt, ".npz")))
+    props = os.path.join(cfg["paths"]["output"].replace("file://", ""), "segment_properties")
+    t.add_row("5 segment props", props, "written" if os.path.exists(os.path.join(props, "info")) else "-")
+    console.print(t)
 
-            # Automatic Type Conversion (int/float)
-            try:
-                if "." in new_val:
-                    new_val = float(new_val)
-                else:
-                    new_val = int(new_val)
-            except ValueError:
-                pass
 
-            cfg_data[section_key] = new_val
-        else:
-            old_val = cfg_data[section_key][key]
-            print(f"Current value for {section_key}/{key}: {old_val}")
-            new_val = input("New value: ").strip()
-            if new_val == "":
-                print("No change made.")
-                continue
-
-            # Automatic Type Conversion (int/float)
-            try:
-                if "." in new_val:
-                    new_val = float(new_val)
-                else:
-                    new_val = int(new_val)
-            except ValueError:
-                pass
-
-            cfg_data[section_key][key] = new_val
-        print(f"Updated {key} → {new_val}")
-
-    # Save to temporary file
-    temp_path = config_path + ".tmp"
-    with open(temp_path, "w") as f:
-        yaml.safe_dump(cfg_data, f, sort_keys=False)
-    print(f"Temporary modified config saved: {temp_path}")
-
-    return temp_path
-
-# ------------------------------------------
-# Main
-# ------------------------------------------
 def run(args, global_cfg):
-    """
-    Unified CLI-compatible entrypoint with per-stage config editing and interrupt handling.
-    Supports safe interruption across multithreaded tasks.
-    """
     logging.basicConfig(
         level=logging.DEBUG if getattr(args, "debug", False) else logging.INFO,
         format="[%(levelname)s] %(message)s",
     )
+    seg_cfg_path = _seg_cfg_path(global_cfg)
+    workers = int(getattr(args, "workers", 1) or 1)
+    restart = bool(getattr(args, "restart", False))
 
-    # Resolve config paths
-    seg_cfg_path = (
-        global_cfg.get("instance_segmentation", {})
-        .get("main", "magneton/instance_segmentation/configs/config.yaml")
-    )
-
-    def confirm_stage(stage_name):
+    def confirm(stage_name):
         print(f"\nStarting stage: {stage_name}")
         print("Press Enter to continue or type 'q' to cancel.")
-        resp = input("> ").strip().lower()
-        if resp == "q":
-            # print(f"Canceled stage: {stage_name}")
+        if input("> ").strip().lower() == "q":
             console.print(f"[bold red]▶ Canceled stage: {stage_name}.[/bold red]\n")
             return False
         return True
 
-    # -----------------------------------
-    # Stage logic
-    # -----------------------------------
+    def pause():
+        print("Press Enter to return menu.")
+        input("> ")
+
     try:
-        if args.stage == "segmentation":
-            if not confirm_stage("Segmentation"):
+        if args.stage == "fragments":
+            if not confirm("Pass 1 - Fragments"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Segmentation Stage")
+            cfg_path = edit_stage_config(seg_cfg_path, "Fragments Stage")
             cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "segmentation")
-            func = segmentation_blocks_parallel if stage_cfg.get("parallel", False) else segmentation_blocks
             with InterruptController():
-                func(cfg, stage_cfg, restart=args.restart)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-            # safe_run(func, cfg, stage_cfg, restart=args.restart)
+                fragments_blocks(cfg, get_stage_config(cfg, "fragments"),
+                                 restart=restart, workers=workers)
+            pause()
 
-        elif args.stage == "segmentation-hpc":
-            if not confirm_stage("Segmentation-HPC"):
+        elif args.stage == "fragments-hpc":
+            if not confirm("Pass 1 - Fragments [HPC]"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Segmentation-HPC Stage")
+            cfg_path = edit_stage_config(seg_cfg_path, "Fragments Stage")
             cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "segmentation")
             with InterruptController():
-                segmentation_blocks_hpc(cfg, stage_cfg, restart=args.restart, dry_run=False)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-            # safe_run(segmentation_blocks_hpc, cfg, stage_cfg, restart=args.restart, dry_run=False)
+                fragments_blocks_hpc(cfg, get_stage_config(cfg, "fragments"),
+                                     restart=restart, config_path=cfg_path)
+            pause()
 
-        elif args.stage == "merge-pools":
-            if not confirm_stage("Merge-Pools"):
+        elif args.stage == "edges":
+            if not confirm("Pass 2 - Edges"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Pools Stage")
+            cfg_path = edit_stage_config(seg_cfg_path, "Edges Stage")
             cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "merge")
             with InterruptController():
-                build_id_pools_parallel(cfg, stage_cfg, restart=args.restart)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-            # safe_run(build_id_pools_parallel, cfg, stage_cfg, restart=args.restart)
-        elif args.stage == "merge-pools-hpc":
-            if not confirm_stage("Merge-Pools-HPC"):
-                return
-            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Pools Stage")
-            cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "merge")
-            with InterruptController():
-                build_id_pools_parallel_hpc(cfg, stage_cfg, restart=args.restart)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
+                edges_blocks(cfg, get_stage_config(cfg, "edges"),
+                             restart=restart, workers=workers)
+            pause()
 
-        elif args.stage == "merge-apply":
-            if not confirm_stage("Merge-Apply"):
+        elif args.stage == "edges-hpc":
+            if not confirm("Pass 2 - Edges [HPC]"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Apply Stage")
+            cfg_path = edit_stage_config(seg_cfg_path, "Edges Stage")
             cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "merge")
             with InterruptController():
-                apply_pools_to_global(cfg, stage_cfg)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-            # safe_run(apply_pools_to_global, cfg, stage_cfg)
-        elif args.stage == "merge-apply-hpc":
-            if not confirm_stage("Merge-Apply-HPC"):
-                return
-            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Apply Stage")
-            cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "merge")
-            with InterruptController():
-                apply_pools_to_global_hpc(cfg, stage_cfg)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
+                edges_blocks_hpc(cfg, get_stage_config(cfg, "edges"),
+                                 restart=restart, config_path=cfg_path)
+            pause()
 
-        elif args.stage == "merge-supervox":
-            if not confirm_stage("Merge-Supervox"):
+        elif args.stage == "global-merge":
+            if not confirm("Pass 3 - Global Merge"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Supervox Stage")
+            cfg_path = edit_stage_config(seg_cfg_path, "Global Merge Stage")
             cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "merge")
             with InterruptController():
-                merge_supervox(cfg, stage_cfg)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
+                global_merge(cfg, get_stage_config(cfg, "global_merge"))
+            pause()
 
-        elif args.stage == "merge-supervox-hpc":
-            if not confirm_stage("Merge-Supervox-HPC"):
+        elif args.stage == "relabel":
+            if not confirm("Pass 4 - Relabel"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Merge-Supervox Stage")
+            cfg_path = edit_stage_config(seg_cfg_path, "Relabel Stage")
             cfg = load_config(cfg_path)
-            stage_cfg = get_stage_config(cfg, "merge")
+            stage_cfg = get_stage_config(cfg, "relabel")
+            lut = _resolve_lut(cfg, stage_cfg)
             with InterruptController():
-                merge_supervox_hpc(cfg, stage_cfg)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
+                relabel_blocks(cfg, stage_cfg, lut, restart=restart, workers=workers)
+            pause()
+
+        elif args.stage == "relabel-hpc":
+            if not confirm("Pass 4 - Relabel [HPC]"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Relabel Stage")
+            cfg = load_config(cfg_path)
+            stage_cfg = get_stage_config(cfg, "relabel")
+            lut = _resolve_lut(cfg, stage_cfg)
+            with InterruptController():
+                relabel_blocks_hpc(cfg, stage_cfg, lut, restart=restart,
+                                   config_path=cfg_path)
+            pause()
+
+        elif args.stage == "segment-props":
+            if not confirm("Pass 5 - Segment Properties"):
+                return
+            cfg_path = edit_stage_config(seg_cfg_path, "Segment Properties Stage")
+            cfg = load_config(cfg_path)
+            with InterruptController():
+                segment_properties(cfg, get_stage_config(cfg, "segment_props"))
+            pause()
 
         elif args.stage == "status":
-            cfg = load_config(seg_cfg_path)
-            folder_done = cfg["checkpoint"]["segmentation_dir"]
-            print(f"[Checkpoint folder]: {folder_done}")
-            if not os.path.exists(folder_done):
-                print("Segmentation state: checkpoint folder not found.")
-            else:
-                files = os.listdir(folder_done)
-                if not files:
-                    print("Segmentation state: no block done.")
-                else:
-                    print("Segmentation state:")
-                    for f in files:
-                        print(f"[Done] {f}")
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-                        
+            _status(load_config(seg_cfg_path))
+            pause()
+
         elif args.stage == "clean":
-            if not confirm_stage("Clean Temporary Files"):
+            if not confirm("Clean graph-pipeline state"):
                 return
             cfg = load_config(seg_cfg_path)
-            for path in [
-                cfg["checkpoint"]["segmentation_dir"],
-                cfg["checkpoint"]["merge_dir"],
-                cfg["segmentation_stage"]["metadata_dir"],
-            ]:
-                if os.path.exists(path):
-                    shutil.rmtree(path)
-                    print(f"[INFO] Cleaned: {path}")
-                else:
-                    print(f"[INFO] Cleaned: {path}")
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-        
-        # return True
-        # if stop_flag.is_set():
-        #     print("Stage ended early due to interruption.")
-        # else:
+            targets = [cfg["checkpoint"]["fragments_dir"],
+                       cfg["checkpoint"].get("relabel_dir"),
+                       cfg.get("edges_stage", {}).get("edges_dir"),
+                       cfg.get("global_merge_stage", {}).get("lut_dir")]
+            console.print("[yellow]This removes checkpoints, edges and LUTs "
+                          "(NOT the fragments/output volumes):[/yellow]")
+            for p in targets:
+                console.print(f"  {p}")
+            if Prompt.ask("[white]> Proceed? (y/n)[/white]", default="n").lower().startswith("y"):
+                for p in targets:
+                    if p and os.path.exists(p):
+                        shutil.rmtree(p)
+                        print(f"[INFO] Cleaned: {p}")
+            pause()
+
         console.print(f"[bold green]▶ Stage {args.stage} completed.[/bold green]\n")
 
     except KeyboardInterrupt:
@@ -337,273 +239,81 @@ def run(args, global_cfg):
     finally:
         logging.shutdown()
 
-# ==========================================================
-# Interactive CLI mode
-# ==========================================================
-def load_global_config(path="magneton/config.yaml"):
-    """Load YAML config file."""
-    try:
-        with open(path, "r") as f:
-            cfg = yaml.safe_load(f)
-        print(f"\nLoaded global config from: {path}")
-        return cfg, path
-    except FileNotFoundError:
-        print(f"\nGlobal config not found at {path}. Using defaults.")
-        return {}, path
-
-
-def save_global_config(cfg, path):
-    """Save updated YAML config."""
-    with open(path, "w") as f:
-        yaml.safe_dump(cfg, f, sort_keys=False)
-    print(f"Saved updated global config to: {path}")
-
-
-def modify_global_config(cfg, cfg_path):
-    """Interactive menu to modify config path or values."""
-    print("\nModify Global Config")
-
-    # new_path = input(f"> Enter new config file path (blank to keep {cfg_path}): ").strip()
-    # if new_path:
-    #     cfg, cfg_path = load_global_config(new_path)
-
-    flat_items = []
-    # print("\nAvailable config parameters:")
-    idx = 1
-    # for section, sub in cfg.items():
-    #     if isinstance(sub, dict):
-    #         for k, v in sub.items():
-    #             flat_items.append((f"{section}/{k}", v))
-    #             print(f"{idx}. {section}/{k}: {v}")
-    #             idx += 1
-    #     else:
-    #         flat_items.append((section, sub))
-    #         print(f"{idx}. {section}: {sub}")
-    #         idx += 1
-    console.rule("[bold bright_white]Available Config Parameters[/bold bright_white]", style="bright_cyan")
-    config_table = Table(
-            box=box.SIMPLE,
-            title_style="bold bright_white",
-            header_style="bright_white",
-            show_header=True
-        )
-    config_table.add_column("Index", justify="center", style="white")
-    config_table.add_column("Section", style="white")
-    config_table.add_column("Parameter", style="white")
-    config_table.add_column("Value", style="white")
-
-    for section, sub in cfg.items():
-        # console.print(f"[bold]{section}[/bold]:")
-        if isinstance(sub, dict):
-            for k, v in sub.items():
-                # console.print(f"   - {k}: [cyan]{v}[/cyan]")
-                flat_items.append((f"{section}/{k}", v))
-                config_table.add_row(f"{idx}", f"{section}", f"{k}", f"[cyan]{v}[/cyan]")
-                idx += 1
-        else:
-            # console.print(f"   - [cyan]{sub}[/cyan]")
-            flat_items.append((section, sub))
-            config_table.add_row("-", "-", "-", f"[cyan]{sub}[/cyan]")
-            idx += 1
-        
-    console.print(config_table)
-    while True:
-        choice = input("> Select parameter to modify (number, or ENTER to finish): ").strip()
-        if choice == "":
-            break
-        if not choice.isdigit() or not (1 <= int(choice) <= len(flat_items)):
-            print("Invalid selection.")
-            continue
-
-        key_path, old_val = flat_items[int(choice) - 1]
-        # print('\n')
-        print(f"Current value for {key_path}: {old_val}")
-        new_val = input("> New value: ").strip()
-        if new_val == "":
-            print("No change made.")
-            continue
-
-        # Apply modification
-        parts = key_path.split("/")
-        target = cfg
-        for p in parts[:-1]:
-            target = target[p]
-        target[parts[-1]] = new_val
-        print(f"Updated {key_path} → {new_val}")
-
-    if Prompt.ask("[white]> Save changes to file? (y/n)[/white]", default="n").lower().startswith("y"):
-        save_global_config(cfg, cfg_path)
-    else:
-        print("Using in-memory config (not saved).")
-
-    return cfg, cfg_path
-
 
 def run_interactive():
-    """Interactive CLI mode with styled Rich interface."""
-    console.print("\n[bold bright_white] Instance Segmentation Interactive Mode[/bold bright_white]\n")
-
+    console.print("\n[bold bright_white] Instance Segmentation — graph pipeline"
+                  "[/bold bright_white]\n")
     cfg_path = "magneton/config.yaml"
     cfg, cfg_path = load_global_config(cfg_path)
-
-    # choice_pool = [str(i) for i in range(10)] + ["h", "help"]
-    choice_pool = [str(i) for i in range(13)]
+    mapping = {"1": "fragments", "2": "fragments-hpc", "3": "edges", "4": "edges-hpc",
+               "5": "global-merge", "6": "relabel", "7": "relabel-hpc",
+               "8": "segment-props", "9": "status", "10": "clean"}
 
     while True:
-        console.rule("[bold bright_white]Instance Segmentation Menu[/bold bright_white]", style="bold white")
+        console.rule("[bold bright_white]Instance Segmentation Menu[/bold bright_white]",
+                     style="bold white")
+        t = Table(show_header=True, box=box.SIMPLE, border_style="white",
+                  header_style="bright_white")
+        t.add_column("Option", justify="center", style="white")
+        t.add_column("Function", style="white")
+        t.add_column("Description", style="white")
+        t.add_row("1", "Pass 1 - Fragments", "Watershed supervoxels on non-overlapping cores")
+        t.add_row("2", "Pass 1 - Fragments [HPC]", "Same, as a SLURM array")
+        t.add_row("3", "Pass 2 - Edges", "Region-graph edges (incl. across core faces)")
+        t.add_row("4", "Pass 2 - Edges [HPC]", "Same, as a SLURM array")
+        t.add_row("5", "Pass 3 - Global Merge", "Threshold the graph -> LUT (fast, sweepable)")
+        t.add_row("6", "Pass 4 - Relabel", "Apply the LUT -> final segmentation")
+        t.add_row("7", "Pass 4 - Relabel [HPC]", "Same, as a SLURM array")
+        t.add_row("8", "Pass 5 - Segment Properties", "Merge per-core counts -> Neuroglancer segment list")
+        t.add_row("9", "Status", "Per-pass artifact counts")
+        t.add_row("10", "Clean", "Remove checkpoints / edges / LUTs")
+        t.add_row("11", "Modify Global Config", "Edit magneton/config.yaml")
+        t.add_row("0", "Return", "Return to main menu")
+        console.print(t)
 
-        table = Table(show_header=True, box=box.SIMPLE, border_style="white", 
-                      title_style="bold bright_white",header_style="bright_white",)
-        
-        table.add_column("Option", justify="center", style="white")
-        table.add_column("Function", style="white")
-        table.add_column("Description", style="white")
-        table.add_row("1", "Affinity Map Segmentation", "Run affinity map segmentation using local resources")
-        table.add_row("2", "Affinity Map Segmentation [HPC]", "Run affinity map segmentation using HPC resources")
-        table.add_row("3", "Merge Blocks - Pools", "Generate a global ID pool for all segmentated blocks")
-        table.add_row("4", "Merge Blocks - Pools [HPC]", "Generate a global ID pool for all segmentated blocks using HPC resources")
-        
-        table.add_row("5", "Merge Blocks - Apply", "Apply the global ID pool to all segmentated blocks")
-        table.add_row("6", "Merge Blocks - Apply [HPC]", "Apply the global ID pool to all segmentated blocks using HPC resources")
-        table.add_row("7", "Merge Blocks - Supervox", "Stitch supervoxels into a global layer + agglomerate graph (proofreading)")
-        table.add_row("8", "Merge Blocks - Supervox [HPC]", "Stitch supervoxels into a global layer + agglomerate graph using HPC resources")
-
-        table.add_row("9", "Status", "View current segmentation status")
-        table.add_row("10", "Clean", "Remove checkpoints and temp data of segmentation")
-        table.add_row("11", "Modify Global Config", "Modify the global configuration files for each module")
-        table.add_row("12", "View Current Config", "View the global configuration files for each module")
-        table.add_row("0", "Return", "Return to main menu")
-        # table.add_row("h", "Help", "Function description")
-
-        console.print(table)
-
-        choice = Prompt.ask("[bright_white]> Select stage[/bright_white]", default="0").strip().lower()
-        if choice not in choice_pool:
-            console.print("[red]Invalid selection. Try again.[/red]")
-            continue
-
+        choice = Prompt.ask("[bright_white]> Select stage[/bright_white]",
+                            default="0").strip().lower()
         if choice == "0":
             console.print("[yellow]Exit Instance Segmentation Pipeline.[/yellow]")
             break
-
         if choice == "11":
             cfg, cfg_path = modify_global_config(cfg, cfg_path)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
+            continue
+        if choice not in mapping:
+            console.print("[red]Invalid selection. Try again.[/red]")
             continue
 
-        if choice == "12":
-            console.rule("[bold bright_white]Current Global Config[/bold bright_white]", style="bright_cyan")
-            config_table = Table(
-                    box=box.SIMPLE,
-                    title_style="bold bright_white",
-                    header_style="bright_white",
-                    show_header=True
-                )
-            config_table.add_column("Index", justify="center", style="white")
-            config_table.add_column("Section", style="white")
-            config_table.add_column("Parameter", style="white")
-            config_table.add_column("Value", style="white")
-    
-            for section, sub in cfg.items():
-                # console.print(f"[bold]{section}[/bold]:")
-                i = 1
-                if isinstance(sub, dict):
-                    for k, v in sub.items():
-                        # console.print(f"   - {k}: [cyan]{v}[/cyan]")
-                        config_table.add_row(f"{i}", f"{section}", f"{k}", f"[cyan]{v}[/cyan]")
-                        i += 1
-                else:
-                    # console.print(f"   - [cyan]{sub}[/cyan]")
-                    config_table.add_row("-", "-", "-", f"[cyan]{sub}[/cyan]")
-                    i += 1
-                
-            console.print(config_table)
-            print("Press Enter to return menu.")
-            input("> ").strip().lower()
-            continue
-        
         cfg, cfg_path = load_global_config(cfg_path)
 
-        # === Stage argument setup ===
         class Args:
             pass
 
         args = Args()
-        mapping = {
-            "1": "segmentation",
-            "2": "segmentation-hpc",
-            "3": "merge-pools",
-            "4": "merge-pools-hpc",
-            "5": "merge-apply",
-            "6": "merge-apply-hpc",
-            "7": "merge-supervox",
-            "8": "merge-supervox-hpc",
-            "9": "status",
-            "10": "clean",
-        }
-        args.stage = mapping.get(choice)
+        args.stage = mapping[choice]
         args.debug = False
-
-        if args.stage in ["segmentation", "segmentation-hpc", "merge-pools"]:
-            restart_choice = Prompt.ask("[white]> Restart? (y/n)[/white]", default="n").lower()
-            args.restart = restart_choice.startswith("y")
-        else:
-            args.restart = False
+        args.restart = False
+        args.workers = 1
+        if args.stage in ("fragments", "edges", "relabel"):
+            args.workers = int(Prompt.ask("[white]> Local workers[/white]", default="1"))
+        if args.stage in ("fragments", "fragments-hpc", "edges", "edges-hpc",
+                          "relabel", "relabel-hpc"):
+            args.restart = Prompt.ask("[white]> Restart? (y/n)[/white]",
+                                      default="n").lower().startswith("y")
 
         console.print(f"\n[green]▶ Executing stage:[/] [cyan]{args.stage}[/cyan]")
         run(args, cfg)
-        # console.print(f"[bold green] Stage completed.[/bold green]\n")
 
 
-# ==========================================================
-# main()
-# ==========================================================
 def main():
     t1 = time.time()
-    parser = argparse.ArgumentParser(description="Block-wise segmentation pipeline")
-    parser.add_argument(
-        "--stage",
-        choices=[
-            "segmentation",
-            "segmentation-hpc",
-            "merge-pools",
-            "merge-apply",
-            "merge-supervox",
-            "merge-supervox-hpc",
-            "tools",
-            "status",
-            "clean",
-        ],
-        required=True,
-    )
-    parser.add_argument(
-        "--tools",
-        choices=[
-            "convert-prec",
-            "convert-prec-hpc",
-            "downsample-prec",
-            "downsample-prec-hpc",
-            "generate-mask",
-            "generate-mask-hpc",
-            "mask-prec",
-            "mask-prec-hpc",
-            "mask-tif",
-            "mask-tif-hpc",
-            "resize-tif",
-            "resize-tif-hpc",
-        ],
-        required=False,
-    )
+    parser = argparse.ArgumentParser(description="Graph-based instance segmentation")
+    parser.add_argument("--stage", choices=STAGES, required=True)
+    parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--restart", action="store_true")
-    parser.add_argument("--force-overlap", action="store_true")
     parser.add_argument("--debug", action="store_true")
     args = parser.parse_args()
-
-    global_cfgs = load_global_config_path("magneton/config.yaml")
-    run(args, global_cfgs)
-    t2 = time.time()
-    print(f"Total runtime: {t2 - t1:.2f}s")
+    run(args, load_global_config_path("magneton/config.yaml"))
+    print(f"Total runtime: {time.time() - t1:.2f}s")
 
 
 if __name__ == "__main__":

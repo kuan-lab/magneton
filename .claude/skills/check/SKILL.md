@@ -13,8 +13,11 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 
 | English keyword(s) | `jobs/` dir prefix |
 |---|---|
-| `seg`, `segmentation`, `waterz`, `mito seg` | `seg`, `seg_*` |
-| `merge` (instance seg merge) | `merge`, `merge_*` |
+| `fragments`, `supervoxels`, `pass 1` | `fragments_*` |
+| `edges`, `region graph`, `pass 2` | `edges_*` |
+| `relabel`, `pass 4`, `apply lut` | `relabel_*` |
+| `seg`, `segmentation`, `waterz`, `mito seg` (LEGACY pipeline) | `seg`, `seg_*` |
+| `merge` (LEGACY instance seg merge) | `merge`, `merge_*` |
 | `merge-supervox`, `supervox`, `supervoxel` | `merge_*/supervox` |
 | `pytc`, `inference`, `training`, `affinity` | `pytc` |
 | `convert`, `prec`, `to precomputed` | `convert` |
@@ -29,6 +32,18 @@ Job directories are **suffixed per submission**, not just by stage. A single sta
 | `analysis`, `morphometrics`, `mito features` | `analysis_*` |
 | `proofreading`, `skeletonize`, `expand`, `nninteractive` | `proofreading_expand` |
 | `membrane` | *(no job dir — runs interactively; see note)* |
+
+Note: **instance segmentation has two pipelines.** The *graph* pipeline (menu 3, `instance_segmentation.main`)
+runs 5 passes: fragments -> edges -> global merge -> relabel -> segment props, with job dirs
+`fragments_*`, `edges_*`, `relabel_*`. The *legacy* overlap-vote pipeline (menu 6,
+`instance_segmentation_legacy.main`) is the old seg -> merge-pools -> merge-apply chain with `seg_*` /
+`merge_*` dirs. A bare "segmentation" is ambiguous — infer from which dirs exist and how recent they are.
+
+Note: in the graph pipeline **global merge (pass 3) and segment props (pass 5) submit NO SLURM job** — both
+run locally in seconds (pass 3 reads only the edge npz files; pass 5 only the per-core counts). There is
+nothing in `jobs/` to query. If asked to `/check` either, skip squeue/sacct and go straight to output
+integrity: for pass 3, a LUT in `global_merge_stage.lut_dir`; for pass 5,
+`<paths.output>/segment_properties/info` plus the `segment_properties` key in the volume's `info`.
 
 Note: `jobs/merge/` is the *toolkit* merge-volumes tool. `jobs/merge_*/` suffixed dirs are almost always *instance_segmentation* merge stage (from `merge_stage.hpc.job_dir` in the instance seg config). The keyword "merge" alone is ambiguous — infer from context (if the user is talking about segmentation/waterz flow, it's instance seg merge; if they just converted a volume, it's toolkit merge).
 
@@ -127,7 +142,13 @@ Report findings:
 
 1. Read `jobs/<suffix>/submit_slurm.sh` and grep for `--config` to find the config file path used.
 2. Read that config to resolve output path(s). Stage-specific keys:
-   - **instance_segmentation**: `paths.output` (global), `paths.output_local_base` (per-block), `checkpoint.segmentation_dir`, `metadata/seg_metadata_*/` (metadata dirs live under `magneton/metadata/`)
+   - **instance_segmentation (graph pipeline)**: pass 1 -> `paths.fragments` (one global supervoxel volume;
+     `checkpoint.fragments_dir` holds `block_*.json` + `.done`, and `n_fragments` per core); pass 2 ->
+     `edges_stage.edges_dir/edges_XXXX.npz` (one per core; the log line reports `N edges kept (M cross-core)`
+     — **zero cross-core edges means the cores never connected**); pass 3 -> `global_merge_stage.lut_dir`;
+     pass 4 -> `paths.output` + `checkpoint.relabel_dir` (`.done` and `counts_XXXX.npz` per core); pass 5 ->
+     `<paths.output>/segment_properties/info`. There are **no per-block volumes** — that was the legacy design.
+   - **instance_segmentation (LEGACY)**: `paths.output` (global), `paths.output_local_base` (per-block), `checkpoint.segmentation_dir`, `metadata/seg_metadata_*/` (metadata dirs live under `magneton/metadata/`)
    - **pytc**: `INFERENCE.OUTPUT_PATH` + `INFERENCE.OUTPUT_NAME` (the h5 file) or precomputed dir
    - **toolkit prec/convert**: `paths.output`
    - **toolkit split**: `split.output`

@@ -244,3 +244,84 @@ def color_blocks(block_indices, chunk_sets):
     for bi, c in color_of.items():
         groups.setdefault(c, []).append(bi)
     return groups
+
+
+# ==========================================================
+# Graph pipeline: non-overlapping cores + halo used only as context
+# ==========================================================
+def build_core_grid(vol_shape_zyx, core_size_zyx, halo_zyx=(0, 0, 0),
+                    origin_zyx=(0, 0, 0), chunk_zyx=None):
+    """
+    Tile the volume with NON-overlapping cores, each carrying a read region
+    grown by `halo` (clipped to the volume).
+
+    Unlike `generate_blocks_zyx` (overlapping blocks, every voxel labelled by up
+    to 8 blocks, stitched by overlap voting) this grid gives every voxel exactly
+    ONE owner. The halo is context for computation only and is never written, so
+    two blocks can never disagree about a voxel. Cross-block connectivity comes
+    from the region graph instead (see stages/edges_stage.py).
+
+    Also fixes the redundant-block bug of `generate_blocks_zyx`: step == core
+    size, so a trailing block covered by its predecessor can never be emitted.
+
+    vol_shape_zyx : (Z, Y, X) extent to tile (NOT including origin)
+    core_size_zyx : (cz, cy, cx) owned region per block
+    halo_zyx      : (hz, hy, hx) context added on every interior face
+    origin_zyx    : absolute voxel coord of the first core
+    chunk_zyx     : optional (cz, cy, cx) storage chunk; cores must be a whole
+                    number of chunks so parallel writers never share a chunk file
+
+    Returns a deterministic list of dicts:
+        {"index": i,
+         "core": (z1, z2, y1, y2, x1, x2),    # absolute, owned, disjoint
+         "read": (z1, z2, y1, y2, x1, x2)}    # absolute, core + halo, clipped
+    """
+    Z, Y, X = vol_shape_zyx
+    cs = tuple(int(v) for v in core_size_zyx)
+    hl = tuple(int(v) for v in halo_zyx)
+    oz0, oy0, ox0 = origin_zyx
+
+    if any(v <= 0 for v in cs):
+        raise ValueError(f"core_size must be positive, got {core_size_zyx}")
+    if chunk_zyx is not None:
+        bad = [(n, c, k) for n, c, k in zip("zyx", cs, chunk_zyx) if k and c % k]
+        if bad:
+            raise ValueError(
+                "core size must be a multiple of the storage chunk so parallel "
+                f"writers never share a chunk file; offending axes: {bad}")
+
+    origin = (oz0, oy0, ox0)
+    sizes = (Z, Y, X)
+    blocks = []
+    for z in range(0, Z, cs[0]):
+        for y in range(0, Y, cs[1]):
+            for x in range(0, X, cs[2]):
+                start = (z, y, x)
+                core, read = [], []
+                for d in range(3):
+                    s = start[d]
+                    e = min(s + cs[d], sizes[d])
+                    core += [origin[d] + s, origin[d] + e]
+                    read += [origin[d] + max(0, s - hl[d]),
+                             origin[d] + min(sizes[d], e + hl[d])]
+                blocks.append({"index": len(blocks),
+                               "core": tuple(core), "read": tuple(read)})
+    return blocks
+
+
+def core_slices_in_read(core, read):
+    """Slices cropping a (z, y, x) array covering `read` down to `core`."""
+    return tuple(slice(core[2 * d] - read[2 * d], core[2 * d + 1] - read[2 * d])
+                 for d in range(3))
+
+
+def assert_cores_tile(blocks, vol_shape_zyx, origin_zyx=(0, 0, 0)):
+    """Sanity check: cores are disjoint and cover the volume exactly."""
+    total = 0
+    for b in blocks:
+        z1, z2, y1, y2, x1, x2 = b["core"]
+        total += (z2 - z1) * (y2 - y1) * (x2 - x1)
+    expect = vol_shape_zyx[0] * vol_shape_zyx[1] * vol_shape_zyx[2]
+    if total != expect:
+        raise AssertionError(f"cores cover {total} voxels, volume has {expect}")
+    return True

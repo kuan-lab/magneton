@@ -110,9 +110,10 @@ def show_menu():
 
     table.add_row("1", "Processing Toolkit", "Data pre- and post-processing toolkit")
     table.add_row("2", "Affinity Map Inference", "Train / Infer affinity maps using deep learning models")
-    table.add_row("3", "Instance Segmentation", "Perform block-based segmentation and merge across blocks")
+    table.add_row("3", "Instance Segmentation", "Supervoxels + region graph, merged globally (no overlap voting)")
     table.add_row("4", "Analysis", "Compute per-instance morphometric features")
     table.add_row("5", "Proofreading", "Skeleton-driven proofreading / GT bootstrapping (skeletonize + nnInteractive)")
+    table.add_row("6", "Instance Segmentation (Legacy)", "Overlapping blocks + overlap-vote stitching (pre-2026-09 volumes)")
     table.add_row("0", "Exit", "Close CLI")
     console.print(table)
 
@@ -134,7 +135,7 @@ def main():
 
         while True:
             show_menu()
-            choice = Prompt.ask("\n> Select a module", choices=["0", "1", "2", "3", "4", "5"], default="0")
+            choice = Prompt.ask("\n> Select a module", choices=["0", "1", "2", "3", "4", "5", "6"], default="0")
 
             if choice == "1":
                 console.rule("[bold bright_white]Pre- and Post-Processing Toolkit[/bold bright_white]", style="bold white", characters="=")
@@ -155,6 +156,10 @@ def main():
             elif choice == "5":
                 console.rule("[bold bright_white]Proofreading Module[/bold bright_white]", style="bold white", characters="=")
                 proofreading.run_interactive()
+
+            elif choice == "6":
+                console.rule("[bold bright_white]Instance Segmentation Module (LEGACY)[/bold bright_white]", style="bold white", characters="=")
+                ins_segmentation.run_interactive_legacy()
 
             elif choice == "0":
                 console.print("\n[bold bright_red] Exiting Magneton... [/bold bright_red]\n")

@@ -53,4 +53,15 @@ def get_stage_config(cfg, stage: str):
         return cfg.get("segmentation_stage", {})
     elif stage == "merge":
         return cfg.get("merge_stage", {})
+    # graph pipeline (non-overlapping cores + region graph)
+    elif stage == "fragments":
+        return cfg.get("fragments_stage", {})
+    elif stage == "edges":
+        return cfg.get("edges_stage", {})
+    elif stage == "global_merge":
+        return cfg.get("global_merge_stage", {})
+    elif stage == "relabel":
+        return cfg.get("relabel_stage", {})
+    elif stage == "segment_props":
+        return cfg.get("segment_props_stage", {})
     return {}

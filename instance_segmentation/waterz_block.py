@@ -214,3 +214,51 @@ def run_waterz_block(
         return (supervox_frozen.astype(np.uint64, copy=False),
                 [o.astype(np.uint32, copy=False) for o in outs])
     return seg.astype(np.uint32, copy=False)
+
+
+def run_watershed_fragments(
+    aff_block_czyx,
+    mask=None,
+    sv_type="3d",
+    interior_thr=0.1,
+    min_distance=3,
+    sv_2d='maxima_distance',
+):
+    """
+    Watershed supervoxels ONLY -- no waterz agglomeration.
+
+    Pass 1 of the graph pipeline: fragments are written once, globally, and the
+    merge decision is deferred to a region graph (pass 2/3) so that cross-block
+    pairs are judged by boundary affinity instead of by overlap voting.
+
+    Returns compacted uint64 supervoxels (z, y, x), ids 1..N, 0 = background
+    (only where `mask` excludes voxels; with mask=None every voxel is labelled,
+    matching run_waterz_block).
+    """
+    t0 = time.time()
+    aff = aff_block_czyx.astype(np.float32)
+    if aff.max() > 1.0:
+        aff /= 255.0
+    if aff.shape[0] == 1:
+        aff = np.concatenate([aff, aff, aff], axis=0)
+    aff = np.ascontiguousarray(aff)
+
+    if sv_type == "3d":
+        B = boundary_from_aff(aff)
+        markers, seed_mask = seeds_3d_from_B(B, interior_thr=interior_thr,
+                                             min_distance=min_distance)
+        supervox = watershed(B, markers=markers, mask=mask).astype(np.int32, copy=False)
+    elif sv_type == "2d":
+        supervox = watershed_2d(aff, sv_2d)
+    else:
+        raise RuntimeError("Supervoxel type should be 3d or 2d.")
+
+    if supervox.max() == 0:
+        print("[WARN] Watershed produced no supervoxels.")
+        return np.zeros(aff.shape[1:], dtype=np.uint64)
+
+    supervox, _ = compact_labels_uint32(supervox)
+    out = np.ascontiguousarray(supervox.astype(np.uint64, copy=False))
+    print(f"[TIMER] run_watershed_fragments: {time.time() - t0:.2f}s, "
+          f"num_supervoxels: {int(out.max())}")
+    return out
