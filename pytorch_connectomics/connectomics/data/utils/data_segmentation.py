@@ -303,10 +303,13 @@ def _load_lsd_descriptor_fn():
 
     Loaded from its file directly rather than via ``import lsd.train...``:
     ``lsd/train/__init__.py`` imports ``lsd.train.gp``, which subclasses
-    gunpowder's ``BatchFilter`` at module scope. We deliberately install
-    ``lsds`` with ``--no-deps`` (no gunpowder/zarr/numcodecs/dask), because
-    those pull a numpy 2.x build and waterz is compiled against the numpy 1.x
-    C-ABI -- mixing them raises "numpy.dtype size changed" (2026-08-27).
+    gunpowder's ``BatchFilter`` at module scope. Importing the real gunpowder
+    is avoided so this works in envs where ``lsds`` was installed with
+    ``--no-deps``; an unpinned gunpowder/zarr/numcodecs install pulls numpy
+    2.x, and waterz is compiled against the numpy 1.x C-ABI -- mixing them
+    raises "numpy.dtype size changed" (2026-08-27). The top-level
+    requirements.txt installs ``lsds`` alongside its ``numpy==1.26.4`` pin,
+    which keeps the resolved deps on numpy 1.x.
 
     The descriptor module itself needs only ``gp.Coordinate`` / ``gp.Roi``,
     which are re-exports of the pure-python ``funlib.geometry``, so a small
@@ -324,9 +327,10 @@ def _load_lsd_descriptor_fn():
     import importlib.util
 
     _HINT = ("The 'L' (local shape descriptor) target option needs 'lsds' and "
-             "'funlib.geometry'. Install them WITHOUT dependencies -- pulling "
-             "gunpowder/zarr/numcodecs upgrades numpy to 2.x and breaks "
-             "waterz's numpy 1.x C-ABI:\n"
+             "'funlib.geometry'. Reinstall magneton from the repo root "
+             "(`pip install --editable .`), or install them WITHOUT "
+             "dependencies -- pulling gunpowder/zarr/numcodecs unpinned "
+             "upgrades numpy to 2.x and breaks waterz's numpy 1.x C-ABI:\n"
              "    python -m pip install --no-deps lsds funlib.geometry")
 
     if 'gunpowder' not in sys.modules:

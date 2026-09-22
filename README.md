@@ -62,20 +62,16 @@ conda install -y boost -c conda-forge
 
 git clone https://github.com/kuan-lab/magneton.git
 cd magneton
-pip install --editable .                 # magneton + toolkit + analysis + proofreading
+pip install --editable .                 # magneton + toolkit + analysis + proofreading (+ wknml, lsds)
 cd pytorch_connectomics && pip install --editable . && cd ..   # affinity inference (also installs Cython)
 # waterz's setup.py imports Cython + numpy at build time, so build it WITHOUT pip's
 # build isolation — the previous step already put Cython + numpy in the env:
 cd waterz && pip install --editable . --no-build-isolation && cd ..   # instance segmentation
-
-# skeletonize proofreading needs wknml (not pulled in by anything above):
-pip install wknml
-# wknml's install bumps numpy to 2.x; monai and the waterz/mahotas C-extensions
-# need numpy<2, so re-pin numpy LAST:
-pip install "numpy==1.26.4"
 ```
 
-Key packages that end up in this env: `torch`, `cloudvolume`, `waterz`, `igneous` (downsample/mesh), `kimimaro` + `wknml` (skeletonize), `connectomics`, `tifffile`.
+`requirements.txt` pins `numpy==1.26.4`, which monai and the waterz/mahotas C-extensions need. Because `wknml` (skeletonize) and `lsds` (the MTLSD `L-...` training target) are installed in the same step, pip resolves them against that pin. Installing either one on its own later, without the pin, upgrades numpy to 2.x and breaks waterz (`numpy.dtype size changed`). If that happens, run `pip install "numpy==1.26.4"`.
+
+Key packages that end up in this env: `torch`, `cloudvolume`, `waterz`, `igneous` (downsample/mesh), `kimimaro` + `wknml` (skeletonize), `lsds` (MTLSD training targets), `connectomics`, `tifffile`.
 
 > The first time a `neuron`-mode segmentation runs, `waterz` JIT-compiles its C++ backend (with `boost` + your system `g++`) into `~/.cython/inline/` — expect a one-off compile on the first block, then it is cached.
 

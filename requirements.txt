@@ -1,11 +1,13 @@
 cloud_volume==12.0.0
 docutils==0.21.2
 einops==0.8.0
+funlib.geometry==0.3.0
 GPUtil==1.4.0
 h5py==3.12.1
 igneous==1.1.1
 igneous_pipeline==4.27.0
 imageio==2.36.1
+lsds==0.1.3
 mahotas==1.4.18
 matplotlib==3.9.4
 monai==1.4.0
@@ -22,4 +24,5 @@ scikit-image==0.24.0
 task_queue==2.14.0
 tifffile==2024.8.30
 tqdm==4.67.1
+wknml==1.1.3
 yacs==0.1.8

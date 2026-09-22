@@ -26,6 +26,7 @@ cd magneton
 pip install --editable .
 
 ```
+This installs everything in `requirements.txt`, including `wknml` (skeletonize proofreading) and `lsds` + `funlib.geometry` (the MTLSD `L-...` training target). They resolve against the `numpy==1.26.4` pin in the same step. Installing `lsds` or `wknml` separately later upgrades numpy to 2.x and breaks waterz (`numpy.dtype size changed`). If that happens, run `pip install numpy==1.26.4`.
 
 ##### Install Affinity Maps Inference Module
 ```bash
