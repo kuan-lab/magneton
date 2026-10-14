@@ -60,8 +60,15 @@ def calculate_memory_target(num_workers):
         return 5_000_000_000  # 5GB default for non-HPC
 
 
-def create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target=None):
-    bounds = None  # None will use full bounds
+def create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target=None,
+                      bounds_zyx=None):
+    # bounds_zyx = [z1, z2, y1, y2, x1, x2] at `mip` (same convention as mesh_prec);
+    # restricts tasks to an ROI of a mostly-empty full-extent volume. None = full bounds.
+    bounds = None
+    if bounds_zyx is not None:
+        from cloudvolume import Bbox
+        z1, z2, y1, y2, x1, x2 = bounds_zyx
+        bounds = Bbox([x1, y1, z1], [x2, y2, z2])  # igneous is XYZ
     tq = TaskQueue('fq://'+queuepath)
 
     kwargs = {
@@ -192,7 +199,8 @@ def main():
 
     if cfg["downsample"]["flag"]:
         memory_target = calculate_memory_target(num_workers)
-        total_tasks = create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
+        total_tasks = create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target,
+                                        bounds_zyx=cfg["downsample"].get("bounds", None))
         run_multiple_workers(queuepath=queuepath, num_workers=num_workers, total_tasks=total_tasks)
     else:
         print('downsample flag is false.')
@@ -209,7 +217,8 @@ def downsample_prec(cfg):
 
     if cfg["downsample"]["flag"]:
         memory_target = calculate_memory_target(num_workers)
-        total_tasks = create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target)
+        total_tasks = create_task_queue(queuepath, source_path, mip, num_mips, factor, memory_target,
+                                        bounds_zyx=cfg["downsample"].get("bounds", None))
         run_multiple_workers(queuepath=queuepath, num_workers=num_workers, total_tasks=total_tasks)
     else:
         print('downsample flag is false.')

@@ -221,7 +221,17 @@ def _run_precomputed(args, cfg, device, mode):
                   f"core=({cz1}:{cz2},{cy1}:{cy2},{cx1}:{cx2})")
 
             # CloudVolume is XYZ-indexed; transpose to ZYX after read.
-            vol_xyzc = in_cv[rx1:rx2, ry1:ry2, rz1:rz2]
+            # Remote sources (BossDB over https) flake transiently ("cannot
+            # reshape array"); retry so one bad fetch doesn't kill a long task.
+            for attempt in range(5):
+                try:
+                    vol_xyzc = in_cv[rx1:rx2, ry1:ry2, rz1:rz2]
+                    break
+                except Exception as e:
+                    if attempt == 4:
+                        raise
+                    print(f"[RETRY {bid}] read failed ({e!r}); attempt {attempt+2}/5")
+                    time.sleep(30 * (attempt + 1))
             vol_zyx = np.asarray(vol_xyzc)
             if vol_zyx.shape[-1] == 1:
                 vol_zyx = vol_zyx[..., 0]

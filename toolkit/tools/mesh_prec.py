@@ -1,5 +1,6 @@
 import sys
 import os
+import json
 import re
 import igneous.task_creation as tc
 from taskqueue import TaskQueue
@@ -144,10 +145,16 @@ def run_tasks_from_queue(queuepath):
     print('Done')
 
 
-def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=120, file_idle_threshold=60, total_tasks=None):
+def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=120, file_idle_threshold=60, total_tasks=None,
+                         watch_dir=None):
     """
     Launch multiple workers and monitor the queue status.
     If the queue remains unchanged for an extended period, terminate all workers and exit.
+
+    `watch_dir` (the output dir) also counts as activity while files keep landing in
+    it: leasing does not touch the queue files, so a phase whose first tasks all run
+    longer than `idle_exit_seconds` otherwise looks idle and is killed mid-write
+    (fib_f graph_v1 meshing: 9/70 tasks written, job still exited 0).
     """
     print(f"[MAIN] Starting {num_workers} parallel workers for queue '{queuepath}'...")
     processes = []
@@ -184,6 +191,13 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=120, file_i
                 continue
         return False
 
+    def output_recently_active():
+        # A directory's mtime moves whenever a file is created in it.
+        try:
+            return watch_dir is not None and time.time() - os.path.getmtime(watch_dir) < file_idle_threshold
+        except FileNotFoundError:
+            return False
+
     while True:
         alive = [p for p in processes if p.is_alive()]
         if not alive:
@@ -200,7 +214,8 @@ def run_multiple_workers(queuepath, num_workers=8, idle_exit_seconds=120, file_i
                     p.terminate()
             break
 
-        if queue_recently_active() or (last_queue_count is not None and current_queue_count != last_queue_count):
+        if (queue_recently_active() or output_recently_active()
+                or (last_queue_count is not None and current_queue_count != last_queue_count)):
             last_activity = time.time()
         last_queue_count = current_queue_count
 
@@ -260,11 +275,15 @@ def mesh_prec(cfg):
         simplification, max_simplification_error, dust_threshold,
         bounds=bounds,
     )
+    local_path = source_path.replace("file://", "").rstrip("/")
+    with open(os.path.join(local_path, "info")) as f:
+        mesh_dir = os.path.join(local_path, json.load(f).get("mesh", ""))
     run_multiple_workers(
         queuepath=queuepath_mesh,
         num_workers=num_workers,
         total_tasks=total_mesh,
         idle_exit_seconds=300,
+        watch_dir=mesh_dir,
     )
 
     # Phase 2: Manifest (lightweight — groups fragments by segment ID)
