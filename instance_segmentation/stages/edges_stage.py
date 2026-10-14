@@ -22,7 +22,7 @@ from waterz import agglomerate
 from magneton.instance_segmentation.waterz_block import getScoreFunc
 from magneton.instance_segmentation.stages.fragments_stage import build_grid
 from magneton.instance_segmentation.utils.graph_utils import (
-    MergeTree, contact_counts, write_edges_npz, fragment_id_bump,
+    FastMergeTree, MergeTree, contact_counts, write_edges_npz, fragment_id_bump,
 )
 from magneton.instance_segmentation.state.checkpoint import is_local_done
 
@@ -78,9 +78,7 @@ def edges_for_block(index, block, core_size, *, input_path, fragments_path, mip,
     for _ in gen:
         pass
 
-    tree = MergeTree()
-    for m in merge_history:
-        tree.merge(m["a"], m["b"], m["c"], m["score"])
+    tree = FastMergeTree(merge_history)
 
     # keep edges with at least one endpoint owned by THIS core; the neighbour
     # writes the rest, and dedupe_edges collapses whatever overlaps
@@ -88,7 +86,7 @@ def edges_for_block(index, block, core_size, *, input_path, fragments_path, mip,
     lo_own = int(fragment_id_bump(index, core_size))
     hi_own = lo_own + cap
 
-    u_out, v_out, s_out, c_out = [], [], [], []
+    lus, lvs, u_out, v_out = [], [], [], []
     for e in initial_rag:
         lu, lv = int(e["u"]), int(e["v"])
         if lu == 0 or lv == 0:
@@ -98,19 +96,16 @@ def edges_for_block(index, block, core_size, *, input_path, fragments_path, mip,
             continue
         if not (lo_own < gu <= hi_own or lo_own < gv <= hi_own):
             continue
-        # The merge-tree score is waterz's VERDICT: the threshold at which these
-        # two regions actually became one. If waterz refused to merge them, the
-        # pair must be recorded as not-merged (inf) -- NOT as e["score"], which is
-        # the pre-agglomeration fragment-vs-fragment score and ignores the
-        # re-scoring of the growing region that caused the refusal. Falling back
-        # to e["score"] resurrects every merge waterz deliberately rejected.
-        merged_at = tree.find_merge(lu, lv)
-        score = float(merged_at) if merged_at is not None else float("inf")
-        a, b = (lu, lv) if lu < lv else (lv, lu)
-        u_out.append(min(gu, gv))
-        v_out.append(max(gu, gv))
-        s_out.append(score)
-        c_out.append(contacts.get((a, b), 0))
+        lus.append(lu); lvs.append(lv)
+        u_out.append(min(gu, gv)); v_out.append(max(gu, gv))
+    # The merge-tree score is waterz's VERDICT: the threshold at which these
+    # two regions actually became one. If waterz refused to merge them, the
+    # pair must be recorded as not-merged (inf) -- NOT as e["score"], which is
+    # the pre-agglomeration fragment-vs-fragment score and ignores the
+    # re-scoring of the growing region that caused the refusal. Falling back
+    # to e["score"] resurrects every merge waterz deliberately rejected.
+    s_out = tree.find_merge_batch(lus, lvs).tolist()
+    c_out = [contacts.get((a, b) if a < b else (b, a), 0) for a, b in zip(lus, lvs)]
 
     cross = sum(1 for a, b in zip(u_out, v_out)
                 if (a - 1) // cap != (b - 1) // cap)
@@ -159,5 +154,9 @@ def edges_blocks(global_cfg, stage_cfg, indices=None, workers=1, restart=False):
                 f.result()
     else:
         for i in tqdm(todo, desc="edges"):
+            # re-check: another array may have finished this core since we started
+            if not restart and os.path.exists(os.path.join(edges_dir, f"edges_{i:04d}.npz")):
+                print(f"[SKIP] core {i}: done by another task")
+                continue
             edges_for_block(i, blocks[i], core_size, **kw)
     print("[DONE] edges stage finished.")

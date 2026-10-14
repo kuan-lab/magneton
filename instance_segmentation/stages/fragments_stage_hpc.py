@@ -9,6 +9,7 @@ from cloudvolume import CloudVolume
 from magneton.instance_segmentation.config import load_global_config_path
 from magneton.instance_segmentation.stages.fragments_stage import build_grid
 from magneton.instance_segmentation.state.checkpoint import is_local_done
+from magneton.instance_segmentation.utils.slurm_utils import parse_job_id
 
 
 def _ensure_dir(p: str):
@@ -102,14 +103,17 @@ def _slurm_script(stage_cfg, job_dir, array_len, job_name, worker_module,
 
 def submit_array(global_cfg, stage_cfg, pending, job_name, worker_module,
                  default_job_dir, dry_run=False, config_path=None):
-    """Shared submit path for the per-core stages (fragments / edges / relabel)."""
+    """Shared submit path for the per-core stages (fragments / edges / relabel).
+
+    Returns the SLURM job id (str) when a job was submitted, else None.
+    """
     hpc = stage_cfg.get("hpc", {})
     if not hpc.get("enable", False):
         print(f"[INFO] {job_name}: hpc.enable=false, submission disabled.")
-        return
+        return None
     if not pending:
         print(f"[INFO] {job_name}: no pending cores.")
-        return
+        return None
     job_dir = hpc.get("job_dir", default_job_dir)
     manifest, n = _write_manifest(job_dir, pending,
                                   int(hpc.get("blocks_per_job", 4)))
@@ -118,13 +122,16 @@ def submit_array(global_cfg, stage_cfg, pending, job_name, worker_module,
                            config_path=config_path)
     print(f"[INFO] Submit command: sbatch {script}")
     if dry_run:
-        return
+        return None
     try:
-        out = subprocess.check_output(["sbatch", script], stderr=subprocess.STDOUT)
-        print(f"[INFO] Submit Output: {out.decode('utf-8', 'ignore')}")
+        out = subprocess.check_output(["sbatch", script],
+                                      stderr=subprocess.STDOUT).decode("utf-8", "ignore")
+        print(f"[INFO] Submit Output: {out}")
+        return parse_job_id(out)
     except Exception as e:
         print(f"[WARN] Submission failed: {e}")
         print(f"[HINT] Run manually: sbatch {script}")
+        return None
 
 
 def fragments_blocks_hpc(global_cfg, stage_cfg, restart=False, dry_run=False,
@@ -132,6 +139,7 @@ def fragments_blocks_hpc(global_cfg, stage_cfg, restart=False, dry_run=False,
     if restart:
         _clear_state(global_cfg)
     pending = _pending(global_cfg, stage_cfg, restart=restart)
-    submit_array(global_cfg, stage_cfg, pending, "fragments",
-                 "magneton.instance_segmentation.tools.run_fragments_shard",
-                 "magneton/jobs/fragments", dry_run=dry_run, config_path=config_path)
+    return submit_array(global_cfg, stage_cfg, pending, "fragments",
+                        "magneton.instance_segmentation.tools.run_fragments_shard",
+                        "magneton/jobs/fragments", dry_run=dry_run,
+                        config_path=config_path)

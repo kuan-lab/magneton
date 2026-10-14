@@ -29,9 +29,9 @@ def edges_blocks_hpc(global_cfg, stage_cfg, restart=False, dry_run=False,
     pending = [i for i in range(len(blocks))
                if restart or not os.path.exists(
                    os.path.join(edges_dir, f"edges_{i:04d}.npz"))]
-    submit_array(global_cfg, stage_cfg, pending, "edges",
-                 "magneton.instance_segmentation.tools.run_edges_shard",
-                 "magneton/jobs/edges", dry_run=dry_run, config_path=config_path)
+    return submit_array(global_cfg, stage_cfg, pending, "edges",
+                        "magneton.instance_segmentation.tools.run_edges_shard",
+                        "magneton/jobs/edges", dry_run=dry_run, config_path=config_path)
 
 
 def relabel_blocks_hpc(global_cfg, stage_cfg, lut_path, restart=False,
@@ -43,7 +43,7 @@ def relabel_blocks_hpc(global_cfg, stage_cfg, lut_path, restart=False,
     # the worker needs the LUT path, so extend the shared submit with an arg
     stage_cfg = dict(stage_cfg)
     stage_cfg.setdefault("hpc", {})
-    submit_array(global_cfg, stage_cfg, pending, "relabel",
-                 "magneton.instance_segmentation.tools.run_relabel_shard "
-                 f"--lut {lut_path}",
-                 "magneton/jobs/relabel", dry_run=dry_run, config_path=config_path)
+    return submit_array(global_cfg, stage_cfg, pending, "relabel",
+                        "magneton.instance_segmentation.tools.run_relabel_shard "
+                        f"--lut {lut_path}",
+                        "magneton/jobs/relabel", dry_run=dry_run, config_path=config_path)

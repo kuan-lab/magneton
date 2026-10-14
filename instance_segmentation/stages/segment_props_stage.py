@@ -73,6 +73,14 @@ def segment_properties(global_cfg, stage_cfg):
         for i, n in zip(d["ids"].tolist(), d["counts"].tolist()):
             counts[i] = counts.get(i, 0) + n
     print(f"[INFO] merged {len(files)} core files -> {len(counts)} segments")
+    # Neuroglancer parses the inline property list up front: 25M ids (Morgan 2D
+    # cube) is a 748 MB JSON that the viewer can't load. min_size lists only
+    # segments >= that many voxels; smaller ones stay in the volume, clickable.
+    min_size = int(stage_cfg.get("min_size", 0))
+    if min_size:
+        n0 = len(counts)
+        counts = {i: n for i, n in counts.items() if n >= min_size}
+        print(f"[INFO] min_size={min_size}: listing {len(counts)} of {n0} segments")
 
     maxaff = None
     if stage_cfg.get("debris_tag", False):

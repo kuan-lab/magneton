@@ -52,10 +52,14 @@ def bump_ids(frag_zyx, bump):
 # ---------------------------------------------------------------------- edges
 def write_edges_npz(path, u, v, score, contact):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    np.savez_compressed(path,
+    # atomic: a task killed mid-write must not leave a truncated edges_*.npz
+    # that a resubmission would then treat as done
+    tmp = f"{path}.tmp{os.getpid()}.npz"
+    np.savez_compressed(tmp,
                         u=np.asarray(u, np.uint64), v=np.asarray(v, np.uint64),
                         score=np.asarray(score, np.float32),
                         contact=np.asarray(contact, np.uint32))
+    os.replace(tmp, path)
 
 
 def read_edges_dir(edges_dir, pattern="edges_*.npz"):
@@ -215,6 +219,99 @@ class MergeTree:
             if y not in self._parent:
                 return None
             y = self._parent[y]
+
+
+class FastMergeTree:
+    """
+    Same answers as MergeTree.find_merge, for millions of queries at once.
+
+    MergeTree walks leaf->root per query with no path compression, so both
+    building and querying cost O(tree depth); at score_threshold 0.6 on dense
+    Morgan cores (15M+ RAG edges, 2M+ merges) that is ~1 h per core. Here the
+    tree is built with a union-find (path compression) and queried with a
+    vectorized binary-lifting LCA, O(log depth) numpy passes over all queries.
+
+    Tree nodes: label ids are leaves [0, n_labels); merge k is internal node
+    n_labels + k. The LCA of two leaves is the merge that first put them in one
+    component, so its score is the waterz verdict for that pair.
+    """
+
+    def __init__(self, merge_history):
+        a = np.fromiter((int(m["a"]) for m in merge_history), np.int64, len(merge_history))
+        b = np.fromiter((int(m["b"]) for m in merge_history), np.int64, len(merge_history))
+        c = np.fromiter((int(m["c"]) for m in merge_history), np.int64, len(merge_history))
+        self.scores = np.fromiter((float(m["score"]) for m in merge_history),
+                                  np.float64, len(merge_history))
+        n_merge = len(a)
+        n_lab = int(max(a.max(initial=0), b.max(initial=0), c.max(initial=0))) + 1
+        self.n_lab = n_lab
+        n = n_lab + n_merge
+        parent = np.arange(n, dtype=np.int64)          # tree parent (self = root)
+        dsu = list(range(n_lab))                       # union-find over labels
+        top = list(range(n_lab))                       # dsu root -> current tree node
+
+        def find(x):
+            r = x
+            while dsu[r] != r:
+                r = dsu[r]
+            while dsu[x] != r:                         # path compression
+                dsu[x], x = r, dsu[x]
+            return r
+
+        for k in range(n_merge):
+            ai, bi, ci = int(a[k]), int(b[k]), int(c[k])
+            node = n_lab + k
+            ra, rb = find(ai), find(bi)
+            parent[top[ra]] = node
+            if rb != ra:
+                parent[top[rb]] = node
+                dsu[rb] = ra
+            if ci != ai and ci != bi:                  # waterz minted/reused another id
+                rc = find(ci)
+                if rc != ra and top[rc] == rc:         # MergeTree: only if c had no parent
+                    parent[top[rc]] = node
+                    dsu[rc] = ra
+            top[ra] = node
+        self.parent = parent
+        self._dsu_find = find
+
+        # binary-lifting table up[k] = 2^k-th ancestor (roots point to themselves)
+        # and depth, both by pointer jumping (list ranking): O(log depth) passes
+        up = [parent]
+        depth = (parent != np.arange(n)).astype(np.int64)
+        jump = parent
+        while True:
+            depth = depth + depth[jump]
+            nxt = jump[jump]
+            if np.array_equal(nxt, jump):
+                break
+            up.append(nxt)
+            jump = nxt
+        self.up = up
+        self.depth = depth
+
+    def find_merge_batch(self, u, v):
+        """Scores for leaf pairs (u[i], v[i]); +inf where never merged."""
+        u = np.asarray(u, np.int64); v = np.asarray(v, np.int64)
+        out = np.full(len(u), np.inf, np.float64)
+        inr = (u < self.n_lab) & (v < self.n_lab)
+        x = np.where(inr, u, 0); y = np.where(inr, v, 0)
+        up, depth = self.up, self.depth
+        # lift the deeper one
+        swap = depth[x] < depth[y]
+        x, y = np.where(swap, y, x), np.where(swap, x, y)
+        diff = depth[x] - depth[y]
+        for k in range(len(up)):
+            sel = ((diff >> k) & 1).astype(bool)
+            x = np.where(sel, up[k][x], x)
+        for k in range(len(up) - 1, -1, -1):
+            ax, ay = up[k][x], up[k][y]
+            d = ax != ay
+            x = np.where(d, ax, x); y = np.where(d, ay, y)
+        lca = np.where(x == y, x, up[0][x])
+        same = (up[-1][x] == up[-1][y]) & inr & (lca >= self.n_lab)
+        out[same] = self.scores[lca[same] - self.n_lab]
+        return out
 
 
 def contact_counts(frag_zyx):

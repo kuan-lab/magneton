@@ -52,6 +52,7 @@ from magneton.instance_segmentation.stages.global_merge import global_merge
 from magneton.instance_segmentation.stages.relabel_stage import relabel_blocks
 from magneton.instance_segmentation.stages.segment_props_stage import segment_properties
 from magneton.instance_segmentation.utils.interrupts import InterruptController
+from magneton.instance_segmentation.utils.slurm_utils import wait_for_job
 
 STAGES = [
     "fragments", "fragments-hpc",
@@ -68,8 +69,12 @@ def _seg_cfg_path(global_cfg):
             .get("main", "magneton/instance_segmentation/configs/config.yaml"))
 
 
-def _resolve_lut(cfg, stage_cfg):
-    """Explicit lut_path, else the newest LUT in lut_dir."""
+def _resolve_lut(cfg, stage_cfg, lut=None):
+    """--lut, else config lut_path, else the newest LUT in lut_dir."""
+    if lut:
+        if not os.path.exists(lut):
+            raise FileNotFoundError(f"--lut {lut} does not exist")
+        return lut
     if stage_cfg.get("lut_path"):
         return stage_cfg["lut_path"]
     lut_dir = (cfg.get("global_merge_stage", {})
@@ -111,11 +116,20 @@ def run(args, global_cfg):
         level=logging.DEBUG if getattr(args, "debug", False) else logging.INFO,
         format="[%(levelname)s] %(message)s",
     )
-    seg_cfg_path = _seg_cfg_path(global_cfg)
+    # --config wins over the root config.yaml pointer, so a sweep can drive a
+    # specific per-volume config without editing the shared (skip-worktree) one.
+    seg_cfg_path = getattr(args, "config", None) or _seg_cfg_path(global_cfg)
     workers = int(getattr(args, "workers", 1) or 1)
     restart = bool(getattr(args, "restart", False))
+    # --yes: no stdin is read anywhere below, so the pipeline runs from a script
+    # or a SLURM job. The interactive menu never sets it.
+    assume_yes = bool(getattr(args, "yes", False))
+    should_wait = bool(getattr(args, "wait", False))
 
     def confirm(stage_name):
+        if assume_yes:
+            print(f"\nStarting stage: {stage_name} (--yes)")
+            return True
         print(f"\nStarting stage: {stage_name}")
         print("Press Enter to continue or type 'q' to cancel.")
         if input("> ").strip().lower() == "q":
@@ -124,14 +138,28 @@ def run(args, global_cfg):
         return True
 
     def pause():
+        if assume_yes:
+            return
         print("Press Enter to return menu.")
         input("> ")
+
+    def prep(stage_title):
+        """Stage config path, asking to edit it only when interactive."""
+        if assume_yes:
+            print(f"[INFO] config: {seg_cfg_path}")
+            return seg_cfg_path
+        return edit_stage_config(seg_cfg_path, stage_title)
+
+    def maybe_wait(job_id):
+        if job_id and should_wait:
+            if not wait_for_job(job_id, poll=int(getattr(args, "poll", 60) or 60)):
+                raise RuntimeError(f"job {job_id} did not finish COMPLETED")
 
     try:
         if args.stage == "fragments":
             if not confirm("Pass 1 - Fragments"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Fragments Stage")
+            cfg_path = prep("Fragments Stage")
             cfg = load_config(cfg_path)
             with InterruptController():
                 fragments_blocks(cfg, get_stage_config(cfg, "fragments"),
@@ -141,17 +169,18 @@ def run(args, global_cfg):
         elif args.stage == "fragments-hpc":
             if not confirm("Pass 1 - Fragments [HPC]"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Fragments Stage")
+            cfg_path = prep("Fragments Stage")
             cfg = load_config(cfg_path)
             with InterruptController():
-                fragments_blocks_hpc(cfg, get_stage_config(cfg, "fragments"),
-                                     restart=restart, config_path=cfg_path)
+                job = fragments_blocks_hpc(cfg, get_stage_config(cfg, "fragments"),
+                                           restart=restart, config_path=cfg_path)
+                maybe_wait(job)
             pause()
 
         elif args.stage == "edges":
             if not confirm("Pass 2 - Edges"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Edges Stage")
+            cfg_path = prep("Edges Stage")
             cfg = load_config(cfg_path)
             with InterruptController():
                 edges_blocks(cfg, get_stage_config(cfg, "edges"),
@@ -161,29 +190,32 @@ def run(args, global_cfg):
         elif args.stage == "edges-hpc":
             if not confirm("Pass 2 - Edges [HPC]"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Edges Stage")
+            cfg_path = prep("Edges Stage")
             cfg = load_config(cfg_path)
             with InterruptController():
-                edges_blocks_hpc(cfg, get_stage_config(cfg, "edges"),
-                                 restart=restart, config_path=cfg_path)
+                job = edges_blocks_hpc(cfg, get_stage_config(cfg, "edges"),
+                                       restart=restart, config_path=cfg_path)
+                maybe_wait(job)
             pause()
 
         elif args.stage == "global-merge":
             if not confirm("Pass 3 - Global Merge"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Global Merge Stage")
+            cfg_path = prep("Global Merge Stage")
             cfg = load_config(cfg_path)
             with InterruptController():
-                global_merge(cfg, get_stage_config(cfg, "global_merge"))
+                global_merge(cfg, get_stage_config(cfg, "global_merge"),
+                             threshold=getattr(args, "threshold", None),
+                             min_contact=getattr(args, "min_contact", None))
             pause()
 
         elif args.stage == "relabel":
             if not confirm("Pass 4 - Relabel"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Relabel Stage")
+            cfg_path = prep("Relabel Stage")
             cfg = load_config(cfg_path)
             stage_cfg = get_stage_config(cfg, "relabel")
-            lut = _resolve_lut(cfg, stage_cfg)
+            lut = _resolve_lut(cfg, stage_cfg, getattr(args, "lut", None))
             with InterruptController():
                 relabel_blocks(cfg, stage_cfg, lut, restart=restart, workers=workers)
             pause()
@@ -191,19 +223,20 @@ def run(args, global_cfg):
         elif args.stage == "relabel-hpc":
             if not confirm("Pass 4 - Relabel [HPC]"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Relabel Stage")
+            cfg_path = prep("Relabel Stage")
             cfg = load_config(cfg_path)
             stage_cfg = get_stage_config(cfg, "relabel")
-            lut = _resolve_lut(cfg, stage_cfg)
+            lut = _resolve_lut(cfg, stage_cfg, getattr(args, "lut", None))
             with InterruptController():
-                relabel_blocks_hpc(cfg, stage_cfg, lut, restart=restart,
-                                   config_path=cfg_path)
+                job = relabel_blocks_hpc(cfg, stage_cfg, lut, restart=restart,
+                                         config_path=cfg_path)
+                maybe_wait(job)
             pause()
 
         elif args.stage == "segment-props":
             if not confirm("Pass 5 - Segment Properties"):
                 return
-            cfg_path = edit_stage_config(seg_cfg_path, "Segment Properties Stage")
+            cfg_path = prep("Segment Properties Stage")
             cfg = load_config(cfg_path)
             with InterruptController():
                 segment_properties(cfg, get_stage_config(cfg, "segment_props"))
@@ -225,7 +258,8 @@ def run(args, global_cfg):
                           "(NOT the fragments/output volumes):[/yellow]")
             for p in targets:
                 console.print(f"  {p}")
-            if Prompt.ask("[white]> Proceed? (y/n)[/white]", default="n").lower().startswith("y"):
+            if assume_yes or Prompt.ask("[white]> Proceed? (y/n)[/white]",
+                                        default="n").lower().startswith("y"):
                 for p in targets:
                     if p and os.path.exists(p):
                         shutil.rmtree(p)
@@ -311,6 +345,20 @@ def main():
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--restart", action="store_true")
     parser.add_argument("--debug", action="store_true")
+    parser.add_argument("-y", "--yes", action="store_true",
+                        help="non-interactive: skip every prompt (no stdin is read)")
+    parser.add_argument("--config", default=None,
+                        help="stage config path; overrides the root config.yaml pointer")
+    parser.add_argument("--wait", action="store_true",
+                        help="HPC stages: block until the SLURM array leaves the queue")
+    parser.add_argument("--poll", type=int, default=60,
+                        help="--wait poll interval in seconds (default 60)")
+    parser.add_argument("--lut", default=None,
+                        help="relabel: LUT to apply (default: newest in lut_dir)")
+    parser.add_argument("--threshold", type=float, default=None,
+                        help="global-merge: override the config threshold")
+    parser.add_argument("--min-contact", dest="min_contact", type=int, default=None,
+                        help="global-merge: override the config min_contact")
     args = parser.parse_args()
     run(args, load_global_config_path("magneton/config.yaml"))
     print(f"Total runtime: {time.time() - t1:.2f}s")
